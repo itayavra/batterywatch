@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
+import QtQuick.Layouts
 import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.plasma5support 2.0 as P5Support
 import org.kde.plasma.components 3.0 as PlasmaComponents
@@ -356,10 +356,13 @@ PlasmoidItem {
                         
                         property bool isHovered: false
                         
-                        RowLayout {
+                        FlexboxLayout {
                             id: deviceRow
                             anchors.fill: parent
-                            spacing: Kirigami.Units.smallSpacing
+                            gap: Kirigami.Units.smallSpacing
+                            justifyContent: FlexboxLayout.JustifySpaceBetween
+                            alignContent: FlexboxLayout.AlignCenter
+                            alignItems: FlexboxLayout.AlignCenter
                             
                             Kirigami.Icon {
                                 source: modelData.icon
@@ -387,38 +390,43 @@ PlasmoidItem {
                                 Layout.fillWidth: true
                             }
                             
-                            PlasmaComponents.ProgressBar {
-                                Layout.preferredWidth: Kirigami.Units.gridUnit * 6
-                                visible: !parent.parent.isHovered
-                                from: 0
-                                to: 100
-                                value: modelData.percentage
-                            }
-                            
-                            RowLayout {
-                                spacing: Kirigami.Units.smallSpacing
-                                visible: parent.parent.isHovered
-                                
-                                PlasmaComponents.ToolButton {
-                                    icon.name: hiddenDevices.indexOf(modelData.serial) === -1 ? "view-visible" : "view-hidden"
-                                    text: hiddenDevices.indexOf(modelData.serial) === -1 ? "Hide" : "Show"
-                                    display: PlasmaComponents.AbstractButton.IconOnly
-                                    onClicked: toggleDeviceVisibility(modelData.serial)
+                            FlexboxLayout {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                justifyContent: FlexboxLayout.JustifyEnd
+                                alignItems: FlexboxLayout.AlignCenter
+                                gap: 15
+
+                                PlasmaComponents.ProgressBar {
+                                    Layout.preferredWidth: Kirigami.Units.gridUnit * 6
+                                    visible: !parent.parent.parent.isHovered
+                                    from: 0
+                                    to: 100
+                                    value: modelData.percentage
                                 }
                                 
-                                PlasmaComponents.ToolButton {
-                                    icon.name: "network-disconnect"
-                                    text: "Disconnect"
-                                    display: PlasmaComponents.AbstractButton.IconOnly
-                                    onClicked: disconnectDevice(modelData.serial)
+                                RowLayout {
+                                    visible: parent.parent.parent.isHovered
+                                    
+                                    PlasmaComponents.ToolButton {
+                                        icon.name: hiddenDevices.indexOf(modelData.serial) === -1 ? "view-visible" : "view-hidden"
+                                        text: hiddenDevices.indexOf(modelData.serial) === -1 ? "Hide" : "Show"
+                                        display: PlasmaComponents.AbstractButton.IconOnly
+                                        onClicked: toggleDeviceVisibility(modelData.serial)
+                                    }
+                                    
+                                    PlasmaComponents.ToolButton {
+                                        icon.name: "network-disconnect"
+                                        text: "Disconnect"
+                                        display: PlasmaComponents.AbstractButton.IconOnly
+                                        onClicked: disconnectDevice(modelData.serial)
+                                    }
                                 }
-                            }
-                            
-                            PlasmaComponents.Label {
-                                text: modelData.percentage + "%"
-                                font.bold: true
-                                Layout.minimumWidth: Kirigami.Units.gridUnit * 2.5
-                                horizontalAlignment: Text.AlignRight
+                                
+                                PlasmaComponents.Label {
+                                    text: modelData.percentage + "%"
+                                    font.bold: true
+                                }
                             }
                         }
                         
