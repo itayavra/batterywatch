@@ -336,16 +336,21 @@ PlasmoidItem {
     // Full representation (popup when clicked)
     fullRepresentation: Item {
         Layout.minimumWidth: Kirigami.Units.gridUnit * 25
-        Layout.minimumHeight: Kirigami.Units.gridUnit * 10
+        Layout.minimumHeight: Kirigami.Units.gridUnit * 6
         Layout.preferredWidth: Kirigami.Units.gridUnit * 30
-        Layout.maximumHeight: Kirigami.Units.gridUnit * 40
-        Layout.preferredHeight: Math.min(
-            column.implicitHeight + Kirigami.Units.gridUnit * 2,
-            Kirigami.Units.gridUnit * 40
-        )
+        // Dynamic height: header (gridUnit * 2.5) + device rows (gridUnit * 4 each)
+        // Maximum of 3.5 rows = gridUnit * 14 for rows
+        Layout.preferredHeight: {
+            var headerHeight = Kirigami.Units.gridUnit * 2.5
+            var rowHeight = Kirigami.Units.gridUnit * 4
+            var deviceCount = bluetoothDevices.length
+            var maxRows = 3.5
+            var actualRows = Math.min(deviceCount, maxRows)
+            return headerHeight + (actualRows * rowHeight) + Kirigami.Units.largeSpacing * 2
+        }
+        Layout.maximumHeight: Kirigami.Units.gridUnit * 2.5 + Kirigami.Units.gridUnit * 14 + Kirigami.Units.largeSpacing * 2
         
         ColumnLayout {
-            id: column
             anchors.fill: parent
             anchors.margins: Kirigami.Units.largeSpacing
             spacing: Kirigami.Units.smallSpacing
@@ -380,119 +385,133 @@ PlasmoidItem {
                 }
             }
             
-            Repeater {
-                model: bluetoothDevices
+            // Scrollable device list with fixed row heights
+            PlasmaComponents.ScrollView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                
+                contentWidth: availableWidth
                 
                 ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    spacing: Kirigami.Units.smallSpacing
+                    width: parent.width
+                    spacing: 0
                     
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: deviceRow.implicitHeight
+                    Repeater {
+                        model: bluetoothDevices
                         
-                        FlexboxLayout {
-                            id: deviceRow
-                            anchors.fill: parent
-                            gap: Kirigami.Units.smallSpacing
-                            // justifyContent: FlexboxLayout.JustifySpaceBetween
-                            // alignContent: FlexboxLayout.AlignCenter
-                            alignItems: FlexboxLayout.AlignCenter
-                            
-                            Kirigami.Icon {
-                                source: modelData.icon
-                                Layout.preferredWidth: Kirigami.Units.iconSizes.medium
-                                Layout.preferredHeight: Kirigami.Units.iconSizes.medium
-                            }
+                        Item {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: Kirigami.Units.gridUnit * 4
                             
                             ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: Kirigami.Units.smallSpacing
+                                anchors.fill: parent
+                                spacing: 0
                                 
-                                PlasmaComponents.Label {
-                                    text: modelData.name || "Unknown Device"
-                                    font.bold: true
-                                }
-                                
-                                PlasmaComponents.Label {
-                                    text: modelData.serial
-                                    font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                                    color: Kirigami.Theme.disabledTextColor
-                                }
-                            }
-                            
-                            Item {
-                                Layout.fillWidth: true
-                            }
-                            
-                            FlexboxLayout {
-                                Layout.fillWidth: true
-                                // Layout.fillHeight: true
-                                justifyContent: FlexboxLayout.JustifyEnd
-                                alignItems: FlexboxLayout.AlignCenter
-                                gap: Kirigami.Units.largeSpacing
-                                
-                                RowLayout {
+                                Item {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    Layout.topMargin: Kirigami.Units.smallSpacing
+                                    Layout.bottomMargin: Kirigami.Units.smallSpacing
                                     
-                                    PlasmaComponents.ToolButton {
-                                        icon.name: hiddenDevices.indexOf(modelData.serial) === -1 ? "view-visible" : "view-hidden"
-                                        text: hiddenDevices.indexOf(modelData.serial) === -1 ? "Hide" : "Show"
-                                        display: PlasmaComponents.AbstractButton.IconOnly
-                                        onClicked: toggleDeviceVisibility(modelData.serial)
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        spacing: Kirigami.Units.smallSpacing
                                         
-                                        PlasmaComponents.ToolTip {
-                                            text: hiddenDevices.indexOf(modelData.serial) === -1 ? "Hide from tray" : "Show in tray"
+                                        Kirigami.Icon {
+                                            source: modelData.icon
+                                            Layout.preferredWidth: Kirigami.Units.iconSizes.medium
+                                            Layout.preferredHeight: Kirigami.Units.iconSizes.medium
+                                            Layout.alignment: Qt.AlignVCenter
                                         }
                                         
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            hoverEnabled: true
-                                            cursorShape: Qt.PointingHandCursor
-                                            onPressed: mouse.accepted = false
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            Layout.alignment: Qt.AlignVCenter
+                                            spacing: 2
+                                            
+                                            PlasmaComponents.Label {
+                                                text: modelData.name || "Unknown Device"
+                                                font.bold: true
+                                                Layout.fillWidth: true
+                                                elide: Text.ElideRight
+                                            }
+                                            
+                                            PlasmaComponents.Label {
+                                                text: modelData.serial
+                                                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                                                color: Kirigami.Theme.disabledTextColor
+                                                Layout.fillWidth: true
+                                                elide: Text.ElideRight
+                                            }
+                                        }
+                                        
+                                        RowLayout {
+                                            Layout.alignment: Qt.AlignVCenter
+                                            spacing: Kirigami.Units.smallSpacing
+                                            
+                                            PlasmaComponents.ToolButton {
+                                                icon.name: hiddenDevices.indexOf(modelData.serial) === -1 ? "view-visible" : "view-hidden"
+                                                text: hiddenDevices.indexOf(modelData.serial) === -1 ? "Hide" : "Show"
+                                                display: PlasmaComponents.AbstractButton.IconOnly
+                                                onClicked: toggleDeviceVisibility(modelData.serial)
+                                                
+                                                PlasmaComponents.ToolTip {
+                                                    text: hiddenDevices.indexOf(modelData.serial) === -1 ? "Hide from tray" : "Show in tray"
+                                                }
+                                                
+                                                MouseArea {
+                                                    anchors.fill: parent
+                                                    hoverEnabled: true
+                                                    cursorShape: Qt.PointingHandCursor
+                                                    onPressed: mouse.accepted = false
+                                                }
+                                            }
+                                            
+                                            PlasmaComponents.ToolButton {
+                                                icon.name: "network-disconnect"
+                                                text: "Disconnect"
+                                                display: PlasmaComponents.AbstractButton.IconOnly
+                                                onClicked: disconnectDevice(modelData.serial)
+                                                
+                                                PlasmaComponents.ToolTip {
+                                                    text: "Disconnect device"
+                                                }
+                                                
+                                                MouseArea {
+                                                    anchors.fill: parent
+                                                    hoverEnabled: true
+                                                    cursorShape: Qt.PointingHandCursor
+                                                    onPressed: mouse.accepted = false
+                                                }
+                                            }
+                                            
+                                            PlasmaComponents.Label {
+                                                text: modelData.percentage + "%"
+                                                font.bold: true
+                                                Layout.minimumWidth: Kirigami.Units.gridUnit * 3
+                                                horizontalAlignment: Text.AlignRight
+                                            }
                                         }
                                     }
-                                    
-                                    PlasmaComponents.ToolButton {
-                                        icon.name: "network-disconnect"
-                                        text: "Disconnect"
-                                        display: PlasmaComponents.AbstractButton.IconOnly
-                                        onClicked: disconnectDevice(modelData.serial)
-                                        
-                                        PlasmaComponents.ToolTip {
-                                            text: "Disconnect device"
-                                        }
-                                        
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            hoverEnabled: true
-                                            cursorShape: Qt.PointingHandCursor
-                                            onPressed: mouse.accepted = false
-                                        }
-                                    }
                                 }
                                 
-                                PlasmaComponents.Label {
-                                    text: modelData.percentage + "%"
-                                    font.bold: true
+                                Kirigami.Separator {
+                                    Layout.fillWidth: true
+                                    visible: index < bluetoothDevices.length - 1
                                 }
                             }
                         }
                     }
                     
-                    Kirigami.Separator {
+                    PlasmaComponents.Label {
+                        visible: bluetoothDevices.length === 0
+                        text: "No Bluetooth devices with battery info found"
                         Layout.fillWidth: true
-                        visible: index < bluetoothDevices.length - 1
+                        Layout.topMargin: Kirigami.Units.largeSpacing
+                        horizontalAlignment: Text.AlignHCenter
+                        color: Kirigami.Theme.disabledTextColor
                     }
                 }
-            }
-            
-            PlasmaComponents.Label {
-                visible: bluetoothDevices.length === 0
-                text: "No Bluetooth devices with battery info found"
-                Layout.fillWidth: true
-                horizontalAlignment: Text.AlignHLeft
-                color: Kirigami.Theme.disabledTextColor
             }
         }
     }
