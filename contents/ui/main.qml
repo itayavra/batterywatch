@@ -11,7 +11,19 @@ PlasmoidItem {
     id: root
     
     property var connectedDevices: []
-    property var hiddenDevices: [] 
+    property var hiddenDevices: []
+    
+    property int visibleDeviceCount: {
+        var count = 0
+        for (var i = 0; i < connectedDevices.length; i++) {
+            if (hiddenDevices.indexOf(connectedDevices[i].serial) === -1) {
+                count++
+            }
+        }
+        return count
+    }
+    
+    property bool hasVisibleDevices: visibleDeviceCount > 0
     
     ConnectionType {
         id: connectionType
@@ -30,15 +42,7 @@ PlasmoidItem {
     toolTipSubText: "No devices"
     
     // Hide widget when no visible devices
-    Plasmoid.status: {
-        var visibleCount = 0
-        for (var i = 0; i < connectedDevices.length; i++) {
-            if (hiddenDevices.indexOf(connectedDevices[i].serial) === -1) {
-                visibleCount++
-            }
-        }
-        return visibleCount > 0 ? PlasmaCore.Types.ActiveStatus : PlasmaCore.Types.HiddenStatus
-    }
+    Plasmoid.status: hasVisibleDevices ? PlasmaCore.Types.ActiveStatus : PlasmaCore.Types.HiddenStatus
     
     function updateTooltip() {
         if (connectedDevices.length === 0) {
@@ -220,22 +224,20 @@ PlasmoidItem {
     
     // Compact representation (what shows in the system tray)
     compactRepresentation: Item {
-        Layout.preferredWidth: row.implicitWidth
-        Layout.preferredHeight: row.implicitHeight
-        visible: {
-            var visibleCount = 0
-            for (var i = 0; i < connectedDevices.length; i++) {
-                if (hiddenDevices.indexOf(connectedDevices[i].serial) === -1) {
-                    visibleCount++
-                }
-            }
-            return visibleCount > 0
-        }
+        
+        Layout.minimumWidth: root.hasVisibleDevices ? -1 : 0
+        Layout.minimumHeight: root.hasVisibleDevices ? -1 : 0
+        Layout.preferredWidth: root.hasVisibleDevices ? row.implicitWidth : 0
+        Layout.preferredHeight: root.hasVisibleDevices ? row.implicitHeight : 0
+        Layout.maximumWidth: root.hasVisibleDevices ? -1 : 0
+        Layout.maximumHeight: root.hasVisibleDevices ? -1 : 0
+        visible: root.hasVisibleDevices
         
         RowLayout {
             id: row
             anchors.fill: parent
             spacing: Kirigami.Units.smallSpacing
+            visible: root.hasVisibleDevices
             
             Repeater {
                 model: connectedDevices
@@ -260,6 +262,7 @@ PlasmoidItem {
         
         MouseArea {
             anchors.fill: parent
+            enabled: root.hasVisibleDevices
             onClicked: root.expanded = !root.expanded
         }
     }
