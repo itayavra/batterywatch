@@ -53,11 +53,9 @@ QtObject {
             
             if (path.indexOf("bluez") !== -1 || 
                 path.indexOf("bluetooth") !== -1 ||
-                path.indexOf("ps-controller") !== -1 ||
                 hasMacAddress) {
                 device.connectionType = connectionTypes.bluetooth
-            }
-            else if (path.indexOf("gip") !== -1 || path.indexOf("hidpp") !== -1) {
+            } else {
                 device.connectionType = connectionTypes.wireless
             }
         }
