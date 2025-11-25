@@ -255,11 +255,11 @@ PlasmoidItem {
         Kirigami.Icon {
             id: placeholderIcon
             anchors.centerIn: parent
-            source: "battery-080"
+            source: root.allDevicesHidden ? Qt.resolvedUrl("../icons/hidden5.png") : Qt.resolvedUrl("../icons/main6.png")
             width: Kirigami.Units.iconSizes.smallMedium
             height: Kirigami.Units.iconSizes.smallMedium
             visible: !root.hasVisibleDevices && (inEditMode || root.allDevicesHidden)
-            opacity: inEditMode ? 0.5 : 1
+            opacity: 1
         }
         
         RowLayout {
