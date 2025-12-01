@@ -1,4 +1,4 @@
-# BatteryWatch 🔋
+# BatteryWatch
 
 **BatteryWatch** is a sleek, modern KDE Plasma 6 widget designed to monitor your device's power ecosystem. Keep track of battery levels for your Bluetooth or wireless devices, like headphones, mouse, keyboard, and game controllers, all from a single, beautiful interface right there in your tray bar!
 
@@ -10,14 +10,14 @@
 
 ![BatteryWatch Screenshot 3](contents/screenshots/screenshot3.png)
 
-## ✨ Features
+## Features
 
 *   **Unified Monitoring**: See the battery status of all connected devices in one place.
 *   **Smart Display**: A minimal tray icon that expands into a detailed list when clicked, and automatically hides when no devices are connected - no wasted space when nothing to show.
 *   **Bluetooth Control**: Disconnect Bluetooth devices directly from the widget.
 *   **Customizable Visibility**: Easily hide or show specific devices from the system tray to keep your workspace clutter-free.
 
-## 📥 Installation
+## Installation
 
 ### From the KDE Store (Recommended)
 1.  Right-click on your desktop or panel.
@@ -32,7 +32,7 @@
     kpackagetool6 --type Plasma/Applet --install BatteryWatch.plasmoid
     ```
 
-## 🛠️ Building from Source
+## Building from Source
 
 ```bash
 git clone https://github.com/itayavra/batterywatch.git
@@ -43,16 +43,13 @@ zip -r BatteryWatch.plasmoid .
 kpackagetool6 --type Plasma/Applet --install BatteryWatch.plasmoid
 ```
 
-## 🤝 Contributing
+## Contributing
 
 Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/itayavra/batterywatch/issues).
 
-## ❤️ Support the Project
+## Support the Project ❤️
 
 If you find BatteryWatch useful and want to support its development, consider buying me a coffee 🫶 ☕
 
 <a href="https://www.buymeacoffee.com/itayavra" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
-## 📄 License
-
-Distributed under the GPL-3.0 License. See `LICENSE` for more information.
