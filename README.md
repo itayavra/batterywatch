@@ -13,11 +13,9 @@
 ## ✨ Features
 
 *   **Unified Monitoring**: See the battery status of all connected devices in one place.
-*   **Smart Filtering**: Automatically hides devices with no battery info.
+*   **Smart Display**: A minimal tray icon that expands into a detailed list when clicked, and automatically hides when no devices are connected — no wasted space when nothing to show.
 *   **Bluetooth Control**: Disconnect Bluetooth devices directly from the widget.
 *   **Customizable Visibility**: Easily hide or show specific devices from the system tray to keep your workspace clutter-free.
-*   **Plasma 6 Ready**: Built with the latest KDE technologies for a seamless experience.
-*   **Compact & Full Views**: A minimal tray icon that expands into a detailed list when you need it.
 
 ## 📥 Installation
 
