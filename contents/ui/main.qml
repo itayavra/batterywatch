@@ -5,7 +5,7 @@ import org.kde.plasma.plasma5support 2.0 as P5Support
 import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.plasma.core as PlasmaCore
 import org.kde.kirigami 2.20 as Kirigami
-unusedimport "DeviceParser.js" as DeviceParser
+import "DeviceParser.js" as DeviceParser
 
 PlasmoidItem {
     id: root
