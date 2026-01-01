@@ -18,6 +18,10 @@ echo "Building $PLASMOID_NAME..."
 zip -r "$OUTPUT_DIR/$PLASMOID_NAME" . \
     -x "contents/screenshots/*" \
     -x "build-plasmoid.sh" \
+    -x "dev-install.sh" \
+    -x "dev-uninstall.sh" \
+    -x "dev-restart-plasma.sh" \
+    -x "dist/*" \
     -x ".git/*" \
     -x ".gitignore"
 
