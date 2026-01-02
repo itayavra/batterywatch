@@ -1,0 +1,9 @@
+[Desktop Entry]
+# This is a dummy .desktop file used by the 'merge.sh' file for localization.
+# https://develop.kde.org/docs/plasma/widget/translations-i18n/
+# https://github.com/Zren/plasma-applet-lib/blob/master/package/translate/merge
+
+Name=BatteryWatch
+
+X-KDE-PluginInfo-Website=https://github.com/itayavra/batterywatch/
+X-KDE-PluginInfo-Name=com.github.itayavra.batterywatch
