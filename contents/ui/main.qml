@@ -26,12 +26,15 @@ PlasmoidItem {
 		id: openLinkHubProvider 
 	}
 
+	// List of providers (in priority order)
+	property var providers: [upowerProvider, companionProvider, openLinkHubProvider]
+
 	// ═══════════════════════════════════════════════════════════════════════
 	// DEVICE STATE
 	// ═══════════════════════════════════════════════════════════════════════
 	
 	// Merged devices from all providers
-	property var allDevices: mergeDevices(upowerProvider.devices, companionProvider.devices, openLinkHubProvider.devices)
+	property var allDevices: mergeDevices(providers.map(p => p.devices))
 	property var hiddenDevices: []
 	
 	property int visibleDeviceCount: {
@@ -91,42 +94,27 @@ PlasmoidItem {
 	// ═══════════════════════════════════════════════════════════════════════
 	
 	// Merge devices from multiple providers, avoiding duplicates
-	function mergeDevices(upowerDevices, companionDevices, openLinkHubDevices) {
+	// deviceProviders: array of device arrays in priority order (first = highest priority)
+	function mergeDevices(deviceProviders) {
 		var merged = []
 		var seenIds = {}
 		
-		// Add UPower devices first (they have priority)
-		for (var i = 0; i < upowerDevices.length; i++) {
-			var device = upowerDevices[i]
-			var id = device.serial || device.objectPath || ""
-			if (id && !seenIds[id]) {
-				merged.push(device)
-				seenIds[id] = true
+		for (var providerIdx = 0; providerIdx < deviceProviders.length; providerIdx++) {
+			var devices = deviceProviders[providerIdx]
+			
+			for (var i = 0; i < devices.length; i++) {
+				var device = devices[i]
+				var id = device.serial || device.objectPath || ""
+				
+				if (id && !seenIds[id]) {
+					merged.push(device)
+					seenIds[id] = true
+				}
 			}
 		}
 		
-		// Add companion devices (skip duplicates)
-		for (var j = 0; j < companionDevices.length; j++) {
-			var device = companionDevices[j]
-			var id = device.serial || ""
-			if (id && !seenIds[id]) {
-				merged.push(device)
-				seenIds[id] = true
-			}
-		}
-
-		// Add OpenLinkHub devices
-		for (var k = 0; k < openLinkHubDevices.length; k++) {
-			var device = openLinkHubDevices[k]
-			var id = device.serial || ""
-			if (id && !seenIds[id]) {
-				merged.push(device)
-				seenIds[id] = true
-			}
-		}
-
 		// Sort by name
-		merged.sort(function(a, b) {
+		merged.sort((a, b) => {
 			var nameA = a.name || ""
 			var nameB = b.name || ""
 			return nameA.localeCompare(nameB)
@@ -193,7 +181,7 @@ PlasmoidItem {
 	function loadHiddenDevices() {
 		var saved = Plasmoid.configuration.hiddenDevices
 		if (saved) {
-			hiddenDevices = saved.split(",").filter(function(s) { return s.length > 0 })
+			hiddenDevices = saved.split(",").filter(s => s.length > 0)
 		} else {
 			hiddenDevices = []
 		}
@@ -219,9 +207,9 @@ PlasmoidItem {
 	// ═══════════════════════════════════════════════════════════════════════
 	
 	function refreshDevices() {
-		upowerProvider.refresh()
-		companionProvider.refresh()
-		openLinkHubProvider.refresh()
+		for (var i = 0; i < providers.length; i++) {
+			providers[i].refresh()
+		}
 	}
 	
 	P5Support.DataSource {
@@ -230,7 +218,7 @@ PlasmoidItem {
 		connectedSources: []
 		interval: 0
 		
-		onNewData: function(sourceName, data) {
+		onNewData: (sourceName, data) => {
 			disconnectSource(sourceName)
 			Qt.callLater(refreshDevices)
 		}

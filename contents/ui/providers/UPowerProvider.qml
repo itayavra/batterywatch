@@ -118,7 +118,7 @@ Item {
         connectedSources: []
         interval: 0
         
-        onNewData: function(sourceName, data) {
+        onNewData: (sourceName, data) => {
             disconnectSource(sourceName)
             
             var lines = data["stdout"].split("\n")
@@ -131,7 +131,7 @@ Item {
                     foundPaths.push(line)
                     
                     // Fetch details for unknown devices
-                    var known = root.devices.some(function(d) { return d.objectPath === line })
+                    var known = root.devices.some(d => d.objectPath === line)
                     if (!known) {
                         detailsSource.connectSource("upower -i " + line)
                     }
@@ -139,9 +139,7 @@ Item {
             }
             
             // Remove disconnected devices
-            var filtered = root.devices.filter(function(d) {
-                return !d.objectPath || foundPaths.indexOf(d.objectPath) !== -1
-            })
+            var filtered = root.devices.filter(d => !d.objectPath || foundPaths.indexOf(d.objectPath) !== -1)
             if (filtered.length !== root.devices.length) {
                 root.devices = filtered
             }
@@ -156,7 +154,7 @@ Item {
         connectedSources: []
         interval: 0
         
-        onNewData: function(sourceName, data) {
+        onNewData: (sourceName, data) => {
             disconnectSource(sourceName)
             
             var objectPath = sourceName.split(" ").pop()
@@ -165,7 +163,7 @@ Item {
             if (info && info.connectionType !== root.wiredType && info.percentage >= 0) {
                 // Update or add device
                 var updated = false
-                var newDevices = root.devices.map(function(d) {
+                var newDevices = root.devices.map(d => {
                     if (d.objectPath === objectPath || (d.serial && d.serial === info.serial)) {
                         updated = true
                         return info
@@ -177,7 +175,7 @@ Item {
                     newDevices.push(info)
                 }
                 
-                newDevices.sort(function(a, b) { return (a.name || "").localeCompare(b.name || "") })
+                newDevices.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
                 root.devices = newDevices
             }
         }
@@ -195,7 +193,7 @@ Item {
         running: true
         repeat: true
         onTriggered: {
-            root.devices.forEach(function(d) {
+            root.devices.forEach(d => {
                 if (d.objectPath) {
                     detailsSource.connectSource("upower -i " + d.objectPath)
                 }
