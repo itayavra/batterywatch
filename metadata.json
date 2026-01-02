@@ -10,7 +10,7 @@
         "Icon": "/icons/battery-monitor.png",
         "Id": "com.github.itayavra.batterywatch",
         "Name": "BatteryWatch",
-        "Version": "0.1.6",
+        "Version": "0.1.7",
         "Website": "https://github.com/itayavra/batterywatch"
     },
     "KPackageStructure": "Plasma/Applet",
