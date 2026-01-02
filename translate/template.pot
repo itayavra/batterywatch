@@ -1,0 +1,121 @@
+# Translation of batterywatch in LANGUAGE
+# Copyright (C) 2026
+# This file is distributed under the same license as the batterywatch package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: batterywatch\n"
+"Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch/\n"
+"POT-Creation-Date: 2026-01-02 22:36+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../metadata.desktop
+msgid "BatteryWatch"
+msgstr ""
+
+#: ../contents/ui/main.qml
+#%1 is the version number.
+msgid "BatteryWatch v%1"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "No connected devices"
+msgstr ""
+
+#: ../contents/ui/main.qml
+#%1 can be the device name or, in the case of multiple batteries, the battery label, or simply the word, ‘Battery’. %2 is the charge percentage value. 
+msgid "%1: %2%"
+msgstr ""
+
+#: ../contents/ui/main.qml
+#The delimiter when listing multiple batteries in the same device.
+msgid ", "
+msgstr ""
+
+#: ../contents/ui/main.qml
+#Used when there are multiple batteries in a device. %1 is the device name. %2 is the delimited list of the device's batteries and their charge percentages.
+msgid "%1 - %2"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "All devices hidden"
+msgstr ""
+
+#: ../contents/ui/main.qml
+#%1 is the charge percentage value.
+msgid "%1%"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "Device Battery Levels"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "Refresh"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "Refresh devices"
+msgstr ""
+
+#: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml
+msgid "Unknown Device"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "Battery"
+msgstr ""
+
+#: ../contents/ui/main.qml
+#%1 is the battery label or simply the word, ‘Battery’. %2 is the charge percentage value. %3 is a Unicode lightning symbol displayed when the device is charging.
+msgid "%1: %2%%3"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "Disconnect"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "Disconnect device"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "Hide"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "Show"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "Hide from tray"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "Show in tray"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "No connected devices with battery info found"
+msgstr ""
+
+#: ../contents/ui/providers/CompanionProvider.qml
+msgid "BatteryWatch: Companion service disconnected"
+msgstr ""
+
+#: ../contents/ui/providers/CompanionProvider.qml
+msgid "BatteryWatch: Failed to parse companion data:"
+msgstr ""
+
+#: ../contents/ui/providers/UPowerProvider.qml
+#Used when a device is known by BatteryWatch to be misreported by UPower. %1 is the device's model name. %2 is the erroneously reported device type (e.g.: ‘mouse’). %3 is the correct device type.   
+msgid "BatteryWatch: Applying UPower device override for '%1': %2 -> %3"
+msgstr ""
