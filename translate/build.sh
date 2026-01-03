@@ -58,12 +58,17 @@ for cat in $catalogs; do
 	catLocale=`basename ${cat%.*}`
 	moFilename="${catLocale}.mo"
 	installPath="${packageRoot}/contents/locale/${catLocale}/LC_MESSAGES/${projectName}.mo"
+	
+	# Create directory structure
+	mkdir -p "$(dirname "$installPath")"
+	
+	# Resolve the path
 	installPath=`realpath -- "$installPath"`
 	relativeInstallPath=`relativePath "${packageRoot}" "${installPath}"`
 	relativeInstallPath="${relativeInstallPath#/*}"
+	
 	echoGray "[translate/build] Converting '${cat}' => '${relativeInstallPath}'"
 	msgfmt -o "${moFilename}" "${cat}"
-	mkdir -p "$(dirname "$installPath")"
 	mv "${moFilename}" "${installPath}"
 done
 
