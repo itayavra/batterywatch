@@ -8,9 +8,9 @@ msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch/\n"
 "POT-Creation-Date: 2026-01-03 15:06+0100\n"
-"PO-Revision-Date: 2026-01-02 23:22+0100\n"
+"PO-Revision-Date: 2026-01-03 15:19+0100\n"
 "Last-Translator: Levente Pál Szíjártó <szijartoleventepal@gmail.com>\n"
-"Language-Team: Hungarian <kde-i18n-doc@kde.org>\n"
+"Language-Team: Hungarian <kde-l10n-hu@kde.org>\n"
 "Language: hu\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -24,19 +24,19 @@ msgstr "BatteryWatch"
 
 #: ../contents/config/config.qml
 msgid "OpenLinkHub Integration"
-msgstr ""
+msgstr "OpenLinkHub-integráció"
 
 #: ../contents/ui/config/OpenLinkHub.qml
 msgid "Enable OpenLinkHub Integration: "
-msgstr ""
+msgstr "OpenLinkHub-integráció engedélyezése: "
 
 #: ../contents/ui/config/OpenLinkHub.qml
 msgid "Enabled"
-msgstr ""
+msgstr "Engedélyezve"
 
 #: ../contents/ui/config/OpenLinkHub.qml
 msgid "OpenLinkHub Port: "
-msgstr ""
+msgstr "OpenLinkHub-port: "
 
 #. i18n: %1 is the version number.
 #: ../contents/ui/main.qml
@@ -142,77 +142,80 @@ msgstr "A társadatok feldolgozása meghiúsult:"
 #. i18n: %1 is the number of devices found.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Devices found: %1"
-msgstr ""
+msgstr "%1 eszköz észlelve."
 
 #. i18n: %1 is the error.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Server error: %1"
-msgstr ""
+msgstr "Kiszolgálóhiba: %1"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Server responded without any battery data!"
-msgstr ""
+msgstr "A kiszolgáló válasza nem tartalmazott akkumulátor-adatokat!"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Failed to parse battery data:"
-msgstr ""
+msgstr "Az akkumulátor-adatok feldolgozása meghiúsult:"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Invalid battery data received:"
-msgstr ""
+msgstr "A fogadott akkumulátor-adatok érvénytelenek:"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Invalid device data for serial:"
-msgstr ""
+msgstr "A következő szériaszámú eszköz adatai érvénytelenek:"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Error processing battery data:"
-msgstr ""
+msgstr "Az akkumulátor-adatok feldolgozása meghiúsult:"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Invalid battery device data, skipping"
-msgstr ""
+msgstr "Az eszköz akkumulátor-adatai helytelenek. Kihagyás."
 
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Device '%1' is not connected, removing."
-msgstr ""
+msgstr "A(z) „%1” eszköz nincs csatlakoztatva. Eltávolítás."
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Processed devices:"
-msgstr ""
+msgstr "Feldolgozott eszközök:"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Invalid device data received for device creation"
 msgstr ""
+"Az eszköz létrehozása meghiúsult, mivel a fogadott adatok érvénytelenek"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Invalid battery device data for device creation"
 msgstr ""
+"Az eszköz létrehozása meghiúsult, mivel a fogadott akkumulátor-adatok érvényte"
+"lenek"
 
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Device '%1' is not connected, skipping."
-msgstr ""
+msgstr "A(z) „%1” eszköz nincs csatlakoztatva. Kihagyás."
 
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Fetching device data for serial: %1"
-msgstr ""
+msgstr "A(z) „%1” szériaszámú eszköz adatainak lekérése."
 
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Successfully fetched device data for serial: %1"
-msgstr ""
+msgstr "A(z) „%1” szériaszámú eszköz adatainak lekérése sikeresen megtörtént."
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Failed to parse device data:"
-msgstr ""
+msgstr "Az eszköz adatainak feldolgozása meghiúsult:"
 
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Server error fetching device '%1':"
-msgstr ""
+msgstr "A(z) „%1” eszköz adatainak lekérése közben kiszolgálóhiba történt:"
 
 #. i18n: Used when a device is known by BatteryWatch to be misreported by UPower.
 #. %1 is the device's model name. %2 is the erroneously reported device type (e.g.: ‘mouse’).
