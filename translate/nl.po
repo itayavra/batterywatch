@@ -1,4 +1,4 @@
-# Translation of batterywatch in LANGUAGE
+# Translation of batterywatch in nl
 # Copyright (C) 2026
 # This file is distributed under the same license as the batterywatch package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
@@ -7,8 +7,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
-"Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch/\n"
-"POT-Creation-Date: 2026-01-03 15:06+0100\n"
+"Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
+"POT-Creation-Date: 2026-01-03 21:15+0200\n"
 "PO-Revision-Date: 2026-01-03 19:56+0100\n"
 "Last-Translator: Heimen Stoffels <vistausss@fastmail.com>\n"
 "Language-Team: \n"
@@ -217,4 +217,5 @@ msgstr "Er is een serverfout opgetreden tijdens het ophalen van ‘%1’:"
 #. %3 is the correct device type.
 #: ../contents/ui/providers/UPowerProvider.qml
 msgid "BatteryWatch: Applying UPower device override for '%1': %2 -> %3"
-msgstr "BatteryWatch: er wordt een UPower-voorrangsregel ingesteld voor ‘%1’: %2 → %3"
+msgstr ""
+"BatteryWatch: er wordt een UPower-voorrangsregel ingesteld voor ‘%1’: %2 → %3"
