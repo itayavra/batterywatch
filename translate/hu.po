@@ -6,8 +6,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
-"Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch/\n"
-"POT-Creation-Date: 2026-01-03 15:06+0100\n"
+"Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
+"POT-Creation-Date: 2026-01-03 21:15+0200\n"
 "PO-Revision-Date: 2026-01-03 15:19+0100\n"
 "Last-Translator: Levente Pál Szíjártó <szijartoleventepal@gmail.com>\n"
 "Language-Team: Hungarian <kde-l10n-hu@kde.org>\n"
@@ -190,8 +190,8 @@ msgstr ""
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Invalid battery device data for device creation"
 msgstr ""
-"Az eszköz létrehozása meghiúsult, mivel a fogadott akkumulátor-adatok érvényte"
-"lenek"
+"Az eszköz létrehozása meghiúsult, mivel a fogadott akkumulátor-adatok "
+"érvénytelenek"
 
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
