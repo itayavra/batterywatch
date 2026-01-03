@@ -9,5 +9,11 @@
     <entry name="hiddenDevices" type="String">
       <default></default>
     </entry>
+    <entry name="enableOpenLinkHubIntegration" type="bool">
+      <default>true</default>
+    </entry>
+    <entry name="openLinkHubApiPort" type="Int">
+      <default>27003</default>
+    </entry>
   </group>
 </kcfg>

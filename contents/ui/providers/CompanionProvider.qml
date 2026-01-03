@@ -30,7 +30,7 @@ Item {
         
         if (Array.isArray(data.batteries) && data.batteries.length > 0) {
             var total = 0
-            data.batteries.forEach(function(bat) {
+            data.batteries.forEach(bat => {
                 var pct = typeof bat.percentage === 'number' ? bat.percentage : 0
                 var label = bat.label || null
                 var labelLower = (label || "").toLowerCase()
@@ -72,7 +72,7 @@ Item {
         connectedSources: []
         interval: 0
         
-        onNewData: function(sourceName, data) {
+        onNewData: (sourceName, data) => {
             disconnectSource(sourceName)
             
             var output = data["stdout"] || ""
@@ -95,9 +95,7 @@ Item {
                 
                 if (!Array.isArray(rawDevices)) return
                 
-                root.devices = rawDevices.map(function(d) {
-                    return parseCompanionDevice(d)
-                }).filter(function(d) { return d !== null })
+                root.devices = rawDevices.map(d => parseCompanionDevice(d)).filter(d => d !== null)
                 
                 if (!root.available) {
                     root.available = true

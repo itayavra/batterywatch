@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tags and commits
       
       - name: Extract version from metadata.json
         id: get_version
@@ -27,6 +29,34 @@ jobs:
             echo "Tag v${{ steps.get_version.outputs.version }} already exists!"
             exit 1
           fi
+      
+      - name: Generate changelog from commits
+        id: changelog
+        run: |
+          # Get the latest tag (previous release)
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "No previous tag found, getting all commits"
+            COMMITS=$(git log --pretty=format:"- %s" --no-merges)
+          else
+            echo "Getting commits since $PREVIOUS_TAG"
+            COMMITS=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s" --no-merges)
+          fi
+          
+          # If no commits found, use a default message
+          if [ -z "$COMMITS" ]; then
+            COMMITS="- No new commits since last release"
+          fi
+          
+          # Write to output file to handle multiline content
+          {
+            echo 'changelog<<EOF'
+            echo "### What's Changed"
+            echo ""
+            echo "$COMMITS"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
       
       - name: Build plasmoid
         run: |
@@ -48,16 +78,20 @@ jobs:
           git tag -a "v${{ steps.get_version.outputs.version }}" -m "Release v${{ steps.get_version.outputs.version }}"
           git push origin "v${{ steps.get_version.outputs.version }}"
       
-      - name: Create GitHub Release
+      - name: Create GitHub Release (Draft)
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
           name: BatteryWatch v${{ steps.get_version.outputs.version }}
-          draft: false
+          draft: true
           prerelease: false
           files: dist/BatteryWatch.plasmoid
           body: |
             ## BatteryWatch v${{ steps.get_version.outputs.version }}
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ---
             
             ### Installation
             Download `BatteryWatch.plasmoid` and install it:
@@ -69,3 +103,7 @@ jobs:
             ```bash
             kpackagetool6 --type Plasma/Applet --upgrade BatteryWatch.plasmoid
             ```
+            
+            ---
+            
+            **Note**: This is a draft release. Review and edit the changes above, then click "Publish release" when ready.

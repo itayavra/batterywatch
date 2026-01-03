@@ -1,5 +1,11 @@
 # BatteryWatch
 
+[![Latest Release](https://img.shields.io/github/v/release/itayavra/batterywatch?color=4CAF50&label=Latest%20release&style=for-the-badge)](https://github.com/itayavra/batterywatch/releases)
+[![KDE Plasma 6](https://img.shields.io/badge/KDE-Plasma%206-blue?style=for-the-badge)](https://store.kde.org/p/2331781)
+[![License](https://img.shields.io/badge/license-GPL--3.0-green?style=for-the-badge)](https://github.com/itayavra/batterywatch/blob/master/LICENSE)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow.svg?style=for-the-badge&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/itayavra)
+---
+
 **BatteryWatch** is a sleek, modern KDE Plasma 6 widget designed to monitor your device's power ecosystem. Keep track of battery levels for your Bluetooth or wireless devices, like headphones, mouse, keyboard, and game controllers, all from a single, beautiful interface right there in your tray bar!
 
 ## Screenshots
@@ -41,6 +47,19 @@ cd batterywatch
 zip -r BatteryWatch.plasmoid .
 # Install
 kpackagetool6 --type Plasma/Applet --install BatteryWatch.plasmoid
+```
+
+## Development
+
+```bash
+# Install development version
+./dev-install.sh
+
+# Restart Plasma Shell to reload changes
+./dev-restart-plasma.sh
+
+# Uninstall development version
+./dev-uninstall.sh
 ```
 
 ## Contributing
