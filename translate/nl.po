@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch/\n"
 "POT-Creation-Date: 2026-01-03 15:06+0100\n"
-"PO-Revision-Date: 2026-01-03 19:27+0100\n"
+"PO-Revision-Date: 2026-01-03 19:56+0100\n"
 "Last-Translator: Heimen Stoffels <vistausss@fastmail.com>\n"
 "Language-Team: \n"
 "Language: nl\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: ../metadata.desktop
 msgid "BatteryWatch"
-msgstr "Accumonitor"
+msgstr "BatteryWatch"
 
 #: ../contents/config/config.qml
 msgid "OpenLinkHub Integration"
@@ -41,7 +41,7 @@ msgstr "OpenLinkHub-poort: "
 #. i18n: %1 is the version number.
 #: ../contents/ui/main.qml
 msgid "BatteryWatch v%1"
-msgstr "Accumonitor v%1"
+msgstr "BatteryWatch v%1"
 
 #: ../contents/ui/main.qml
 msgid "No connected devices"
@@ -131,11 +131,11 @@ msgstr "Er zijn verbonden apparaten met accu-informatie aangetroffen"
 
 #: ../contents/ui/providers/CompanionProvider.qml
 msgid "BatteryWatch: Companion service disconnected"
-msgstr "Accumonitor: verbinding met hulpdienst verbroken"
+msgstr "BatteryWatch: verbinding met hulpdienst verbroken"
 
 #: ../contents/ui/providers/CompanionProvider.qml
 msgid "BatteryWatch: Failed to parse companion data:"
-msgstr "Accumonitor: gegevensverwerking van hulpdienst mislukt:"
+msgstr "BatteryWatch: gegevensverwerking van hulpdienst mislukt:"
 
 #. i18n: %1 is the number of devices found.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
@@ -217,4 +217,4 @@ msgstr "Er is een serverfout opgetreden tijdens het ophalen van ‘%1’:"
 #. %3 is the correct device type.
 #: ../contents/ui/providers/UPowerProvider.qml
 msgid "BatteryWatch: Applying UPower device override for '%1': %2 -> %3"
-msgstr "Accumonitor: er wordt een UPower-voorrangsregel ingesteld voor ‘%1’: %2 → %3"
+msgstr "BatteryWatch: er wordt een UPower-voorrangsregel ingesteld voor ‘%1’: %2 → %3"
