@@ -21,6 +21,17 @@ rm -rf "$DEV_DIR/dist" "$DEV_DIR/.git"
 sed -i 's/com.github.itayavra.batterywatch/'"$DEV_ID"'/g' "$DEV_DIR/metadata.json"
 sed -i 's/"BatteryWatch"/"BatteryWatch (Dev)"/g' "$DEV_DIR/metadata.json"
 
+# Rename translation files to match the new plugin ID
+for locale_dir in "$DEV_DIR"/contents/locale/*/LC_MESSAGES/; do
+    if [ -d "$locale_dir" ]; then
+        old_mo="$locale_dir/plasma_applet_com.github.itayavra.batterywatch.mo"
+        new_mo="$locale_dir/plasma_applet_${DEV_ID}.mo"
+        if [ -f "$old_mo" ]; then
+            mv "$old_mo" "$new_mo"
+        fi
+    fi
+done
+
 # Check if dev version is already installed
 if kpackagetool6 --type Plasma/Applet --list 2>/dev/null | grep -q "$DEV_ID"; then
     echo "Upgrading existing dev installation..."
