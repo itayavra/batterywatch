@@ -4,18 +4,22 @@
             {
                 "Email": "itay.avra@gmail.com",
                 "Email[hu]": "itay.avra@gmail.com",
-                "Email[pl]": "itay.avra@gmail.com"
+                "Email[pl]": "itay.avra@gmail.com",
+                "Email[he]": "itay.avra@gmail.com"
             }
         ],
         "Category": "System Information",
         "Category[hu]": "Rendszerinformáció",
         "Category[pl]": "Szczegóły Systemowe",
+        "Category[he]": "מידע על המערכת",
         "Description": "Monitor battery levels of all connected devices",
         "Description[hu]": "Csatlakoztatott eszközök akkumulátorszintjének megjelenítése",
         "Description[pl]": "Monitoruj poziom baterii wszystkich podłączonych urządzeń",
+        "Description[he]": "עקוב אחר רמות הסוללה של כל המכשירים המחוברים",
         "Icon": "/icons/battery-monitor.png",
         "Id": "com.github.itayavra.batterywatch",
         "Name": "BatteryWatch",
+        "Name[he]": "BatteryWatch",
         "Version": "0.1.9",
         "Website": "https://github.com/itayavra/batterywatch"
     },

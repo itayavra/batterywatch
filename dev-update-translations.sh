@@ -35,6 +35,5 @@ echo "Next steps:"
 echo "  1. Run: ./dev-install.sh"
 echo "  2. Run: ./dev-restart-plasma.sh"
 echo "  3. Test with: LANGUAGE=pl plasmashell --replace"
-echo "     (Available: 'hu' Hungarian, 'nl' Dutch, 'pl' Polish)"
+echo "     (Available: 'he' Hebrew, 'hu' Hungarian, 'nl' Dutch, 'pl' Polish)"
 echo ""
-
