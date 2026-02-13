@@ -10,7 +10,7 @@ cd ..
 
 ### Individual Steps
 
-If you need to run steps separately:
+If you need to run steps separately (from this directory):
 
 1. **Extract and merge strings** (after code changes):
    ```bash
@@ -83,14 +83,6 @@ kstart plasmashell
 - `update-translations.sh` - Convenience script (merge + build)
 - `../contents/locale/*/LC_MESSAGES/*.mo` - Compiled translations (generated)
 
-### Current Languages
-
-| Locale | Language | Status |
-|--------|----------|--------|
-| hu | Hungarian | ✅ Complete |
-| he | Hebrew | ✅ Complete |
-| nl | Dutch | ✅ Complete |
-| pl | Polish | ✅ Complete |
 
 ### Notes
 

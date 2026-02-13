@@ -131,11 +131,11 @@ else
 fi
 
 potMessageCount=`expr $(grep -Pzo 'msgstr ""\n(\n|$)' "template.pot" | grep -c 'msgstr ""')`
-echo "|  Locale  |  Lines  | % Done|" > "./Status.md"
-echo "|----------|---------|-------|" >> "./Status.md"
-entryFormat="| %-8s | %7s | %5s |"
-templateLine=`perl -e "printf(\"$entryFormat\", \"Template\", \"${potMessageCount}\", \"\")"`
-echo "$templateLine" >> "./Status.md"
+statusHeader="| Locale | Language | Status | % Done |"
+statusDivider="|--------|----------|--------|--------|"
+echo "$statusHeader" > "./Status.md"
+echo "$statusDivider" >> "./Status.md"
+entryFormat="| %-6s | %-12s | %-12s | %6s |"
 
 rm "${DIR}/infiles.list"
 echoGray "[translate/merge] Done extracting messages"
@@ -181,7 +181,28 @@ for cat in $catalogs; do
 	poEmptyMessageCount=`expr $(grep -Pzo 'msgstr ""\n(\n|$)' "$cat.new" | grep -c 'msgstr ""')`
 	poMessagesDoneCount=`expr $potMessageCount - $poEmptyMessageCount`
 	poCompletion=`perl -e "printf(\"%d\", $poMessagesDoneCount * 100 / $potMessageCount)"`
-	poLine=`perl -e "printf(\"$entryFormat\", \"$catLocale\", \"${poMessagesDoneCount}/${potMessageCount}\", \"${poCompletion}%\")"`
+	
+	# Get Language Name from PO header or fallback to locale
+	langName=$(grep "# Translation of .* in " "$cat.new" | head -n 1 | sed 's/.* in //')
+	if [ -z "$langName" ] || [ "$langName" = "LANGUAGE" ] || [ "$langName" = "$catLocale" ]; then
+		# Fallback to a few known ones or just use the locale capitalized
+		case "$catLocale" in
+			he) langName="Hebrew" ;;
+			hu) langName="Hungarian" ;;
+			nl) langName="Dutch" ;;
+			pl) langName="Polish" ;;
+			*) langName=$(echo "$catLocale" | awk '{print toupper(substr($0,1,1))tolower(substr($0,2))}') ;;
+		esac
+	fi
+
+	statusIcon="🟡 In Progress"
+	if [ "$poCompletion" -eq 100 ]; then
+		statusIcon="✅ Complete"
+	elif [ "$poCompletion" -eq 0 ]; then
+		statusIcon="🔴 Not Started"
+	fi
+
+	poLine=`perl -e "printf(\"$entryFormat\", \"$catLocale\", \"$langName\", \"$statusIcon\", \"${poCompletion}%\")"`
 	echo "$poLine" >> "./Status.md"
 
 	# mv "$cat" "$cat.old"
@@ -246,14 +267,27 @@ rm "$DIR/template.desktop"
 rm "$DIR/LINGUAS"
 
 #---
-# Populate ReadMe.md
-echoGray "[translate/merge] Updating translate/ReadMe.md"
-sed -i -E 's`share\/plasma\/plasmoids\/(.+)\/translate`share/plasma/plasmoids/'"${plasmoidName}"'/translate`' ./ReadMe.md
-if [[ "$website" == *"github.com"* ]]; then
-	sed -i -E 's`\[new issue\]\(https:\/\/github\.com\/(.+)\/(.+)\/issues\/new\)`[new issue]('"${website}"'/issues/new)`' ./ReadMe.md
+# Populate root README.md with translation status
+echoGray "[translate/merge] Updating root README.md"
+statusFile="./Status.md"
+readmeFile="../README.md"
+
+if [ -f "$readmeFile" ] && [ -f "$statusFile" ]; then
+    # Create a temporary file
+    tmpReadme="${readmeFile}.tmp"
+    
+    # Use awk to replace content between markers
+    awk -v status="$(cat $statusFile)" '
+        BEGIN { p=1 }
+        /<!-- TRANSLATIONS_START -->/ { print; print status; p=0 }
+        /<!-- TRANSLATIONS_END -->/ { p=1 }
+        p { if (!/<!-- TRANSLATIONS_START -->/) print }
+    ' "$readmeFile" > "$tmpReadme"
+    
+    mv "$tmpReadme" "$readmeFile"
+    rm "$statusFile"
+else
+    echoRed "[translate/merge] Warning: Could not find root README.md or Status.md"
 fi
-sed -i '/^|/ d' ./ReadMe.md # Remove status table from ReadMe
-cat ./Status.md >> ./ReadMe.md
-rm ./Status.md
 
 echoGreen "[translate/merge] Done merge script"

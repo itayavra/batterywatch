@@ -66,6 +66,18 @@ kpackagetool6 --type Plasma/Applet --install BatteryWatch.plasmoid
 
 Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/itayavra/batterywatch/issues).
 
+For instructions on how to contribute translations, add new languages, or test current ones, please refer to the [Translation Guide](translate/README.md).
+## Supported Languages
+
+<!-- TRANSLATIONS_START -->
+| Locale | Language | Status | % Done |
+|--------|----------|--------|--------|
+| he     | Hebrew       | ✅ Complete |   100% |
+| hu     | Hungarian    | ✅ Complete |   100% |
+| nl     | Dutch        | ✅ Complete |   100% |
+| pl     | polish       | ✅ Complete |   100% |
+<!-- TRANSLATIONS_END -->
+
 ## Support the Project ❤️
 
 If you find BatteryWatch useful and want to support its development, consider buying me a coffee 🫶 ☕
