@@ -73,9 +73,9 @@ For instructions on how to contribute translations, add new languages, or test c
 | Locale | Language | Status | % Done |
 |--------|----------|--------|--------|
 | he     | Hebrew       | ✅ Complete |   100% |
-| hu     | Hungarian    | ✅ Complete |   100% |
-| nl     | Dutch        | ✅ Complete |   100% |
-| pl     | polish       | ✅ Complete |   100% |
+| hu     | Hungarian    | 🟡 In Progress |    91% |
+| nl     | Dutch        | 🟡 In Progress |    91% |
+| pl     | polish       | 🟡 In Progress |    91% |
 <!-- TRANSLATIONS_END -->
 
 ## Support the Project ❤️

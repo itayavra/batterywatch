@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-01-03 21:15+0200\n"
+"POT-Creation-Date: 2026-03-24 22:15+0200\n"
 "PO-Revision-Date: 2026-01-03 16:20+0100\n"
 "Last-Translator: AzraelBunn\n"
 "Language-Team: \n"
@@ -20,16 +20,32 @@ msgid "BatteryWatch"
 msgstr "BatteryWatch"
 
 #: ../contents/config/config.qml
+msgid "Appearance"
+msgstr ""
+
+#: ../contents/config/config.qml
 msgid "OpenLinkHub Integration"
 msgstr "Integracja z OpenLinkHub"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Custom Font Size: "
+msgstr ""
+
+#: ../contents/ui/config/Appearance.qml ../contents/ui/config/OpenLinkHub.qml
+msgid "Enabled"
+msgstr "Włączona"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Size (px): "
+msgstr ""
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Custom Device Icon Size: "
+msgstr ""
 
 #: ../contents/ui/config/OpenLinkHub.qml
 msgid "Enable OpenLinkHub Integration: "
 msgstr "Włącz integrację z OpenLinkHub"
-
-#: ../contents/ui/config/OpenLinkHub.qml
-msgid "Enabled"
-msgstr "Włączona"
 
 #: ../contents/ui/config/OpenLinkHub.qml
 msgid "OpenLinkHub Port: "

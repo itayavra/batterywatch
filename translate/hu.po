@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-01-03 21:15+0200\n"
+"POT-Creation-Date: 2026-03-24 22:15+0200\n"
 "PO-Revision-Date: 2026-01-03 15:19+0100\n"
 "Last-Translator: Levente Pál Szíjártó <szijartoleventepal@gmail.com>\n"
 "Language-Team: Hungarian <kde-l10n-hu@kde.org>\n"
@@ -23,16 +23,32 @@ msgid "BatteryWatch"
 msgstr "BatteryWatch"
 
 #: ../contents/config/config.qml
+msgid "Appearance"
+msgstr ""
+
+#: ../contents/config/config.qml
 msgid "OpenLinkHub Integration"
 msgstr "OpenLinkHub-integráció"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Custom Font Size: "
+msgstr ""
+
+#: ../contents/ui/config/Appearance.qml ../contents/ui/config/OpenLinkHub.qml
+msgid "Enabled"
+msgstr "Engedélyezve"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Size (px): "
+msgstr ""
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Custom Device Icon Size: "
+msgstr ""
 
 #: ../contents/ui/config/OpenLinkHub.qml
 msgid "Enable OpenLinkHub Integration: "
 msgstr "OpenLinkHub-integráció engedélyezése: "
-
-#: ../contents/ui/config/OpenLinkHub.qml
-msgid "Enabled"
-msgstr "Engedélyezve"
 
 #: ../contents/ui/config/OpenLinkHub.qml
 msgid "OpenLinkHub Port: "
