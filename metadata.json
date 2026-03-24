@@ -20,7 +20,7 @@
         "Id": "com.github.itayavra.batterywatch",
         "Name": "BatteryWatch",
         "Name[he]": "BatteryWatch",
-        "Version": "0.2.0",
+        "Version": "0.2.1",
         "Website": "https://github.com/itayavra/batterywatch"
     },
     "KPackageStructure": "Plasma/Applet",
