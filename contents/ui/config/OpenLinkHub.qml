@@ -25,6 +25,7 @@ KCMUtils.SimpleKCM {
 			id: openLinkHubApiPort
 			Kirigami.FormData.label: i18n("OpenLinkHub Port: ")
 			to: 65535
+			enabled: enableOpenLinkHubIntegration.checked
 		}
 
 	}

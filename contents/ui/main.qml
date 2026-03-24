@@ -285,15 +285,15 @@ PlasmoidItem {
 
 					Kirigami.Icon {
 						source: modelData.icon
-						Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
-						Layout.preferredHeight: Kirigami.Units.iconSizes.smallMedium
+						Layout.preferredWidth: Plasmoid.configuration.useCustomIconSize ? Plasmoid.configuration.customIconSize : Kirigami.Units.iconSizes.smallMedium
+						Layout.preferredHeight: Plasmoid.configuration.useCustomIconSize ? Plasmoid.configuration.customIconSize : Kirigami.Units.iconSizes.smallMedium
 						Layout.alignment: Qt.AlignCenter
 					}
 
 					PlasmaComponents.Label {
 						// i18n: %1 is the charge percentage value.
 						text: i18n("%1%", modelData.percentage)
-						font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+						font.pixelSize: Plasmoid.configuration.useCustomFontSize ? Plasmoid.configuration.customFontSize : Kirigami.Theme.smallFont.pixelSize
 						Layout.alignment: Qt.AlignCenter
 						horizontalAlignment: Text.AlignHCenter
 						verticalAlignment: Text.AlignVCenter

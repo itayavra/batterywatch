@@ -15,5 +15,17 @@
     <entry name="openLinkHubApiPort" type="Int">
       <default>27003</default>
     </entry>
+    <entry name="useCustomFontSize" type="bool">
+      <default>false</default>
+    </entry>
+    <entry name="useCustomIconSize" type="bool">
+      <default>false</default>
+    </entry>
+    <entry name="customFontSize" type="Int">
+      <default>12</default>
+    </entry>
+    <entry name="customIconSize" type="Int">
+      <default>22</default>
+    </entry>
   </group>
 </kcfg>
