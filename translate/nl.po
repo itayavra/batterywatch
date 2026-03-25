@@ -233,4 +233,5 @@ msgstr "Er is een serverfout opgetreden tijdens het ophalen van ‘%1’:"
 #. %3 is the correct device type.
 #: ../contents/ui/providers/UPowerProvider.qml
 msgid "BatteryWatch: Applying UPower device override for '%1': %2 -> %3"
-msgstr "BatteryWatch: er wordt een UPower-voorrangsregel ingesteld voor ‘%1’: %2 → %3"
+msgstr ""
+"BatteryWatch: er wordt een UPower-voorrangsregel ingesteld voor ‘%1’: %2 → %3"
