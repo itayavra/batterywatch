@@ -107,7 +107,9 @@ Item {
         onNewData: (src, data) => {
             disconnectSource(src)
 
-            if (data["exit code"] !== 0 || !data.stdout.trim()) {
+            if (!root.kdeConnectEnabled) return
+
+            if (data["exit code"] !== 0) {
                 if (Object.keys(root.knownDevices).length > 0) {
                     root.devices = []
                     root.deviceData = {}
