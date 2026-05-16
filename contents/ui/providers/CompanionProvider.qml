@@ -73,7 +73,7 @@ Item {
         id: companionDisconnectSource
         engine: "executable"
         interval: 0
-        // Companion polls on its own timer; refresh will pick up the change
+        // Companion polls on its own timer, refresh will pick up the change
         onNewData: (src, data) => disconnectSource(src)
     }
 
@@ -110,7 +110,7 @@ Item {
                 
                 if (!root.available) {
                     root.available = true
-                    console.log(i18n("BatteryWatch: Companion service disconnected"))
+                    console.log(i18n("BatteryWatch: Companion service connected"))
                 }
             } catch (e) {
                 console.warn(i18n("BatteryWatch: Failed to parse companion data:"), e)

@@ -59,7 +59,7 @@ Item {
         let result = []
         for (let id in deviceData) {
             const d = deviceData[id]
-            if (typeof d.charge !== "number" || d.charge < 0) continue
+            if (d.charge < 0) continue
             result.push({
                 name: d.name || id,
                 serial: id,
@@ -112,19 +112,20 @@ Item {
                     root.devices = []
                     root.deviceData = {}
                     root.knownDevices = {}
-                    console.log("BatteryWatch: KDE Connect daemon unavailable")
+                    console.log(i18n("BatteryWatch: KDE Connect daemon unavailable"))
                 }
                 return
             }
 
             // qdbus outputs one device ID per line
             const ids = data.stdout.split("\n").map(s => s.trim()).filter(Boolean)
+            const wasEmpty = Object.keys(root.knownDevices).length === 0
             let current = {}
 
             ids.forEach(id => {
                 current[id] = true
                 if (!root.knownDevices[id]) {
-                    root.deviceData[id] = { name: "", type: "", charge: undefined, charging: false }
+                    root.deviceData[id] = { name: "", type: "", charge: -1, charging: false }
                     root.fetchDeviceData(id)
                 }
             })
@@ -134,6 +135,10 @@ Item {
             }
 
             root.knownDevices = current
+
+            if (wasEmpty && ids.length > 0)
+                console.log(i18n("BatteryWatch: KDE Connect daemon connected"))
+
             Qt.callLater(root.updateDevices)
         }
 
@@ -161,8 +166,8 @@ Item {
             if (data["exit code"] !== 0 || !data.stdout.trim()) return
 
             // gdbus GetAll output: ({'name': <'Phone'>, 'type': <'phone'>, ...},)
-            const nameMatch = data.stdout.match(/'name': <'([^']+)'>/)
-            const typeMatch = data.stdout.match(/'type': <'([^']+)'>/)
+            const nameMatch = data.stdout.match(/'name': <'((?:[^'\\]|\\.)*)'>/)
+            const typeMatch = data.stdout.match(/'type': <'((?:[^'\\]|\\.)*)'>/)
             if (nameMatch) root.deviceData[id].name = nameMatch[1]
             if (typeMatch) root.deviceData[id].type = typeMatch[1]
             Qt.callLater(root.updateDevices)
