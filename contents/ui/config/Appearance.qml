@@ -23,6 +23,7 @@ KCMUtils.SimpleKCM {
 
     property alias cfg_useChargingColor: useChargingColor.checked
     property alias cfg_chargingColor: chargingColor.color
+    property alias cfg_showTrayChargingIndicator: showChargingIndicator.checked
 
     property alias cfg_zoneOneColor: zoneOneColor.color
     property alias cfg_useZoneOneColor: useZoneOneColor.checked
@@ -72,7 +73,7 @@ KCMUtils.SimpleKCM {
 
         Kirigami.Separator {
             Kirigami.FormData.isSection: true
-            Kirigami.FormData.label: i18n("Tray Text Settings")
+            Kirigami.FormData.label: i18n("Tray Settings")
             QQL.Layout.fillWidth: true
         }
 
@@ -214,6 +215,18 @@ KCMUtils.SimpleKCM {
                     visible: customIconSizeHelp.hovered
                     text: i18n("Adjust the size of tray icons (in pixels).")
                 }
+            }
+        }
+
+        Item {
+            Kirigami.FormData.label: i18n("Charging indicator")
+            implicitWidth: showChargingIndicator.implicitWidth
+            implicitHeight: page.boxHeight
+
+            QQC2.CheckBox {
+                id: showChargingIndicator
+                anchors.verticalCenter: parent.verticalCenter
+                text: i18n("Show charging indicator in tray")
             }
         }
 

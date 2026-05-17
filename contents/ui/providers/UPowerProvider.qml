@@ -21,6 +21,12 @@ Item {
     
     function refresh() {
         listSource.connectSource("upower -e")
+        root.devices.forEach(d => {
+            if (d.objectPath) {
+                detailsSource.disconnectSource("upower -i " + d.objectPath)
+                detailsSource.connectSource("upower -i " + d.objectPath)
+            }
+        })
     }
     
     // Parse UPower text output into device object
@@ -31,6 +37,7 @@ Item {
             serial: "",
             nativePath: "",
             percentage: -1,
+            charging: false,
             type: "",
             icon: "battery-symbolic",
             connectionType: root.wiredType,
@@ -60,6 +67,13 @@ Item {
             else if (trimmedLine.indexOf("percentage:") !== -1) {
                 var percentStr = trimmedLine.split(":")[1].trim().replace("%", "")
                 device.percentage = parseInt(percentStr)
+            }
+            else if (trimmedLine.indexOf("state:") !== -1) {
+                device.charging = trimmedLine.split(":")[1].trim() === "charging"
+            }
+            else if (trimmedLine.indexOf("icon-name:") !== -1) {
+                if (trimmedLine.indexOf("charging") !== -1)
+                    device.charging = true
             }
             // Detect device type: exactly 2 spaces of indentation, single word, no colon
             else if (line.startsWith("  ") && !line.startsWith("    ") &&
@@ -156,9 +170,13 @@ Item {
                 }
             }
             
-            // Remove disconnected devices
+            // Remove disconnected devices and their detail sources
             var filtered = root.devices.filter(d => !d.objectPath || foundPaths.indexOf(d.objectPath) !== -1)
             if (filtered.length !== root.devices.length) {
+                root.devices.forEach(d => {
+                    if (d.objectPath && foundPaths.indexOf(d.objectPath) === -1)
+                        detailsSource.disconnectSource("upower -i " + d.objectPath)
+                })
                 root.devices = filtered
             }
         }
@@ -170,11 +188,9 @@ Item {
         id: detailsSource
         engine: "executable"
         connectedSources: []
-        interval: 0
-        
+        interval: 10000
+
         onNewData: (sourceName, data) => {
-            disconnectSource(sourceName)
-            
             var objectPath = sourceName.split(" ").pop()
             var info = parseUPowerOutput(data["stdout"], objectPath)
             
@@ -205,17 +221,5 @@ Item {
         repeat: true
         onTriggered: listSource.connectSource("upower -e")
     }
-    
-    Timer {
-        interval: 60000
-        running: true
-        repeat: true
-        onTriggered: {
-            root.devices.forEach(d => {
-                if (d.objectPath) {
-                    detailsSource.connectSource("upower -i " + d.objectPath)
-                }
-            })
-        }
-    }
+
 }
