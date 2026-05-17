@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-05-16 22:39+0300\n"
+"POT-Creation-Date: 2026-05-18 01:17+0300\n"
 "PO-Revision-Date: 2026-03-24 23:56+0100\n"
 "Last-Translator: Levente Pál Szíjártó <szijartoleventepal@gmail.com>\n"
 "Language-Team: hu\n"
@@ -97,6 +97,14 @@ msgstr "Ikon"
 #: ../contents/ui/config/Appearance.qml
 msgid "Adjust the size of tray icons (in pixels)."
 msgstr "A tálcaikonok méretének beállítása (képpontokban)."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Spacing"
+msgstr "Térköz"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Adjust the gap between tray icons (in pixels)."
+msgstr "A tálcaikonok közötti távolság beállítása (képpontban)."
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Charging indicator"
@@ -200,7 +208,7 @@ msgid "No connected devices"
 msgstr "Nincsenek csatlakoztatott eszközök"
 
 #. i18n: %1 can be the device name or, in the case of multiple batteries, the battery label,
-#. or simply the word, 'Battery'. %2 is the charge percentage value.
+#. or simply the word, ‘Battery’. %2 is the charge percentage value.
 #: ../contents/ui/main.qml
 msgid "%1: %2%"
 msgstr "%1: %2%"
@@ -221,9 +229,10 @@ msgstr "%1 - %2"
 msgid "All devices hidden"
 msgstr "Minden eszköz rejtett"
 
+#. i18n: %1 is the charge percentage value. %% is a literal percent sign.
 #: ../contents/ui/main.qml
-msgid "%1%%2"
-msgstr "%1%%2"
+msgid "%1%"
+msgstr "%1%"
 
 #: ../contents/ui/main.qml
 msgid "Device Battery Levels"
@@ -246,7 +255,7 @@ msgstr "Ismeretlen eszköz"
 msgid "Battery"
 msgstr "Akkumulátor"
 
-#. i18n: %1 is the battery label or simply the word, 'Battery'. %2 is the charge percentage value.
+#. i18n: %1 is the battery label or simply the word, ‘Battery’. %2 is the charge percentage value.
 #. %3 is a Unicode lightning symbol displayed when the device is charging.
 #: ../contents/ui/main.qml
 msgid "%1: <span style=\"color:%4\">%2%</span>%3"
@@ -276,6 +285,11 @@ msgstr "Elrejtés a paneltálcáról"
 #: ../contents/ui/main.qml
 msgid "Show in tray"
 msgstr "Megjelenítés a paneltálcán"
+
+#. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
+#: ../contents/ui/main.qml
+msgid "%1%%2"
+msgstr "%1%%2"
 
 #: ../contents/ui/main.qml
 msgid "No connected devices with battery info found"
@@ -344,7 +358,7 @@ msgstr "Az eszköz akkumulátor-adatai helytelenek. Kihagyás."
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Device '%1' is not connected, removing."
-msgstr "A(z) „%1" eszköz nincs csatlakoztatva. Eltávolítás."
+msgstr "A(z) „%1” eszköz nincs csatlakoztatva. Eltávolítás."
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Processed devices:"
@@ -364,17 +378,17 @@ msgstr ""
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Device '%1' is not connected, skipping."
-msgstr "A(z) „%1" eszköz nincs csatlakoztatva. Kihagyás."
+msgstr "A(z) „%1” eszköz nincs csatlakoztatva. Kihagyás."
 
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Fetching device data for serial: %1"
-msgstr "A(z) „%1" szériaszámú eszköz adatainak lekérése."
+msgstr "A(z) „%1” szériaszámú eszköz adatainak lekérése."
 
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Successfully fetched device data for serial: %1"
-msgstr "A(z) „%1" szériaszámú eszköz adatainak lekérése sikeresen megtörtént."
+msgstr "A(z) „%1” szériaszámú eszköz adatainak lekérése sikeresen megtörtént."
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Failed to parse device data:"
@@ -383,15 +397,15 @@ msgstr "Az eszköz adatainak feldolgozása meghiúsult:"
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Server error fetching device '%1':"
-msgstr "A(z) „%1" eszköz adatainak lekérése közben kiszolgálóhiba történt:"
+msgstr "A(z) „%1” eszköz adatainak lekérése közben kiszolgálóhiba történt:"
 
 #: ../contents/ui/providers/OpenRazerProvider.qml
 msgid "Unknown Razer Device"
 msgstr "Ismeretlen Razer-eszköz"
 
 #. i18n: Used when a device is known by BatteryWatch to be misreported by UPower.
-#. %1 is the device's model name. %2 is the erroneously reported device type (e.g.: 'mouse').
+#. %1 is the device's model name. %2 is the erroneously reported device type (e.g.: ‘mouse’).
 #. %3 is the correct device type.
 #: ../contents/ui/providers/UPowerProvider.qml
 msgid "BatteryWatch: Applying UPower device override for '%1': %2 -> %3"
-msgstr "BatteryWatch: UPower-eszköz felülírása. „%1": %2 -> %3"
+msgstr "BatteryWatch: UPower-eszköz felülírása. „%1”: %2 -> %3"

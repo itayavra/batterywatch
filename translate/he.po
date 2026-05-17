@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-05-17 22:04+0300\n"
+"POT-Creation-Date: 2026-05-18 01:17+0300\n"
 "PO-Revision-Date: 2026-01-03 21:15+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -96,6 +96,14 @@ msgstr "סמל"
 #: ../contents/ui/config/Appearance.qml
 msgid "Adjust the size of tray icons (in pixels)."
 msgstr "כוון את גודל הסמלים במגש (בפיקסלים)."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Spacing"
+msgstr "ריווח"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Adjust the gap between tray icons (in pixels)."
+msgstr "כוון את הריווח בין הסמלים במגש (בפיקסלים)."
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Charging indicator"
@@ -216,9 +224,10 @@ msgstr "%1 - %2"
 msgid "All devices hidden"
 msgstr "כל המכשירים מוסתרים"
 
+#. i18n: %1 is the charge percentage value. %% is a literal percent sign.
 #: ../contents/ui/main.qml
-msgid "%1%%2"
-msgstr "%1%%2"
+msgid "%1%"
+msgstr "%1%"
 
 #: ../contents/ui/main.qml
 msgid "Device Battery Levels"
@@ -269,6 +278,11 @@ msgstr "הסתר מהמגש"
 #: ../contents/ui/main.qml
 msgid "Show in tray"
 msgstr "הצג במגש"
+
+#. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
+#: ../contents/ui/main.qml
+msgid "%1%%2"
+msgstr "%1%%2"
 
 #: ../contents/ui/main.qml
 msgid "No connected devices with battery info found"
