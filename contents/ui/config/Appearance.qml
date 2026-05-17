@@ -17,6 +17,8 @@ KCMUtils.SimpleKCM {
     property alias cfg_customFontSize: customFontSize.value
     property alias cfg_useCustomIconSize: useCustomIconSize.checked
     property alias cfg_customIconSize: customIconSize.value
+    property alias cfg_useCustomTraySpacing: useCustomTraySpacing.checked
+    property alias cfg_customTraySpacing: customTraySpacing.value
     // Color
     property alias cfg_useCustomDefaultColor: useCustomDefaultColor.checked
     property alias cfg_customDefaultColor: customDefaultColor.color
@@ -214,6 +216,26 @@ KCMUtils.SimpleKCM {
                 QQC2.ToolTip {
                     visible: customIconSizeHelp.hovered
                     text: i18n("Adjust the size of tray icons (in pixels).")
+                }
+            }
+
+            QQC2.CheckBox {
+                id: useCustomTraySpacing
+                text: i18n("Spacing")
+            }
+
+            QQC2.SpinBox {
+                id: customTraySpacing
+                enabled: useCustomTraySpacing.checked
+                from: 0
+                to: 32
+                QQL.Layout.preferredWidth: page.boxWidth
+            }
+            QQC2.ToolButton {
+                icon.name: "help-about"
+                QQC2.ToolTip {
+                    visible: parent.hovered
+                    text: i18n("Adjust the gap between tray icons (in pixels).")
                 }
             }
         }
