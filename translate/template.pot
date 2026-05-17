@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-05-16 22:39+0300\n"
+"POT-Creation-Date: 2026-05-17 22:04+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -42,7 +42,7 @@ msgid "System Default (%1)"
 msgstr ""
 
 #: ../contents/ui/config/Appearance.qml
-msgid "Tray Text Settings"
+msgid "Tray Settings"
 msgstr ""
 
 #: ../contents/ui/config/Appearance.qml
@@ -93,6 +93,14 @@ msgstr ""
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Adjust the size of tray icons (in pixels)."
+msgstr ""
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Charging indicator"
+msgstr ""
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Show charging indicator in tray"
 msgstr ""
 
 #: ../contents/ui/config/Appearance.qml
@@ -204,9 +212,8 @@ msgstr ""
 msgid "All devices hidden"
 msgstr ""
 
-#. i18n: %1 is the charge percentage value.
 #: ../contents/ui/main.qml
-msgid "%1%"
+msgid "%1%%2"
 msgstr ""
 
 #: ../contents/ui/main.qml

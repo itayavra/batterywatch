@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-05-16 22:39+0300\n"
+"POT-Creation-Date: 2026-05-17 22:04+0300\n"
 "PO-Revision-Date: 2026-03-25 16:45+0100\n"
 "Last-Translator: Heimen Stoffels <vistausss@fastmail.com>\n"
 "Language-Team: \n"
@@ -43,7 +43,7 @@ msgid "System Default (%1)"
 msgstr "Systeemstandaard (%1)"
 
 #: ../contents/ui/config/Appearance.qml
-msgid "Tray Text Settings"
+msgid "Tray Settings"
 msgstr "Systeemvakinstellingen"
 
 #: ../contents/ui/config/Appearance.qml
@@ -97,6 +97,14 @@ msgstr "Pictogramgrootte"
 #: ../contents/ui/config/Appearance.qml
 msgid "Adjust the size of tray icons (in pixels)."
 msgstr "Pas de grootte van de systeemvakpictogrammen aan (in pixels)."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Charging indicator"
+msgstr "Laadindicator"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Show charging indicator in tray"
+msgstr "Laadindicator weergeven in systeemvak"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Battery Colors"
@@ -213,10 +221,9 @@ msgstr "%1 - %2"
 msgid "All devices hidden"
 msgstr "Alle apparaten zijn verborgen"
 
-#. i18n: %1 is the charge percentage value.
 #: ../contents/ui/main.qml
-msgid "%1%"
-msgstr "%1%"
+msgid "%1%%2"
+msgstr "%1%%2"
 
 #: ../contents/ui/main.qml
 msgid "Device Battery Levels"

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-05-16 22:39+0300\n"
+"POT-Creation-Date: 2026-05-17 22:04+0300\n"
 "PO-Revision-Date: 2026-01-03 21:15+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -42,8 +42,8 @@ msgid "System Default (%1)"
 msgstr "ברירת מחדל של המערכת (%1)"
 
 #: ../contents/ui/config/Appearance.qml
-msgid "Tray Text Settings"
-msgstr "הגדרות טקסט במגש"
+msgid "Tray Settings"
+msgstr "הגדרות מגש"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Font family:"
@@ -96,6 +96,14 @@ msgstr "סמל"
 #: ../contents/ui/config/Appearance.qml
 msgid "Adjust the size of tray icons (in pixels)."
 msgstr "כוון את גודל הסמלים במגש (בפיקסלים)."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Charging indicator"
+msgstr "סמל טעינה"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Show charging indicator in tray"
+msgstr "הצג סמל טעינה במגש"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Battery Colors"
@@ -208,10 +216,9 @@ msgstr "%1 - %2"
 msgid "All devices hidden"
 msgstr "כל המכשירים מוסתרים"
 
-#. i18n: %1 is the charge percentage value.
 #: ../contents/ui/main.qml
-msgid "%1%"
-msgstr "%1%"
+msgid "%1%%2"
+msgstr "%1%%2"
 
 #: ../contents/ui/main.qml
 msgid "Device Battery Levels"

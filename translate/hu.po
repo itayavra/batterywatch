@@ -43,8 +43,8 @@ msgid "System Default (%1)"
 msgstr "Rendszer alapértelmezése (%1)"
 
 #: ../contents/ui/config/Appearance.qml
-msgid "Tray Text Settings"
-msgstr "Tálcaszöveg beállításai"
+msgid "Tray Settings"
+msgstr "Tálca beállításai"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Font family:"
@@ -97,6 +97,14 @@ msgstr "Ikon"
 #: ../contents/ui/config/Appearance.qml
 msgid "Adjust the size of tray icons (in pixels)."
 msgstr "A tálcaikonok méretének beállítása (képpontokban)."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Charging indicator"
+msgstr "Töltésjelző"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Show charging indicator in tray"
+msgstr "Töltésjelző megjelenítése a tálcán"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Battery Colors"
@@ -213,10 +221,9 @@ msgstr "%1 - %2"
 msgid "All devices hidden"
 msgstr "Minden eszköz rejtett"
 
-#. i18n: %1 is the charge percentage value.
 #: ../contents/ui/main.qml
-msgid "%1%"
-msgstr "%1%"
+msgid "%1%%2"
+msgstr "%1%%2"
 
 #: ../contents/ui/main.qml
 msgid "Device Battery Levels"
