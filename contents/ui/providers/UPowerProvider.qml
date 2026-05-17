@@ -222,5 +222,4 @@ Item {
         onTriggered: listSource.connectSource("upower -e")
     }
 
-    
 }

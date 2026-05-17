@@ -309,6 +309,7 @@ PlasmoidItem {
                     }
 
                     PlasmaComponents.Label {
+                        // i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
                         text: i18n("%1%%2", modelData.percentage, Plasmoid.configuration.showTrayChargingIndicator && modelData.charging ? " ⚡︎" : "")
                         color: batteryColor(modelData.percentage, modelData.charging)
                         font.family: Plasmoid.configuration.fontFamily !== "" ? Plasmoid.configuration.fontFamily : Kirigami.Theme.smallFont.family
@@ -506,6 +507,7 @@ PlasmoidItem {
                                         // Single battery: show percentage
                                         PlasmaComponents.Label {
                                             visible: !hasMultipleBatteries
+                                            // i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
                                             text: i18n("%1%%2", device.percentage, device.charging ? " ⚡" : "")
                                             color: batteryColor(device.percentage, device.charging)
                                             font.bold: true
