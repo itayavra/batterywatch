@@ -60,7 +60,7 @@
     </entry>
 
     <entry name="useChargingColor" type="Bool">
-      <default>true</default>
+      <default>false</default>
     </entry>
     <entry name="chargingColor" type="Color">
       <default>#2196F3</default>

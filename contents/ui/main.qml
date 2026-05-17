@@ -309,8 +309,7 @@ PlasmoidItem {
                     }
 
                     PlasmaComponents.Label {
-                        // i18n: %1 is the charge percentage value. %2 is a Unicode lightning symbol displayed when the device is charging, or empty string.
-                        text: i18n("%1%%2", modelData.percentage, Plasmoid.configuration.showTrayChargingIndicator && modelData.charging ? " ⚡" : "")
+                        text: i18n("%1%%2", modelData.percentage, Plasmoid.configuration.showTrayChargingIndicator && modelData.charging ? " ⚡︎" : "")
                         color: batteryColor(modelData.percentage, modelData.charging)
                         font.family: Plasmoid.configuration.fontFamily !== "" ? Plasmoid.configuration.fontFamily : Kirigami.Theme.smallFont.family
                         font.weight: Plasmoid.configuration.fontBold ? Plasmoid.configuration.fontWeight : Font.Normal

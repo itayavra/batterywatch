@@ -226,7 +226,7 @@ KCMUtils.SimpleKCM {
             QQC2.CheckBox {
                 id: showChargingIndicator
                 anchors.verticalCenter: parent.verticalCenter
-                text: i18n("Show ⚡ when charging")
+                text: i18n("Show charging indicator in tray")
             }
         }
 
