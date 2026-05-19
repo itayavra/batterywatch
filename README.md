@@ -87,6 +87,7 @@ For instructions on how to contribute translations, add new languages, or test c
 <!-- TRANSLATIONS_START -->
 | Locale | Language | Status | % Done |
 |--------|----------|--------|--------|
+| cs     | Czech        | ✅ Complete |   100% |
 | he     | Hebrew       | ✅ Complete |   100% |
 | hu     | Hungarian    | ✅ Complete |   100% |
 | nl     | Dutch        | ✅ Complete |   100% |
