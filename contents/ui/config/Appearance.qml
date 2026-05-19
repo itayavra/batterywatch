@@ -232,9 +232,10 @@ KCMUtils.SimpleKCM {
                 QQL.Layout.preferredWidth: page.boxWidth
             }
             QQC2.ToolButton {
+                id: customTraySpacingHelp
                 icon.name: "help-about"
                 QQC2.ToolTip {
-                    visible: parent.hovered
+                    visible: customTraySpacingHelp.hovered
                     text: i18n("Adjust the gap between tray icons (in pixels).")
                 }
             }

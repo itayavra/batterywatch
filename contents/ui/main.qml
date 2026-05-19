@@ -309,7 +309,7 @@ PlasmoidItem {
                     }
 
                     PlasmaComponents.Label {
-                        // i18n: %1 is the charge percentage value. %% is a literal percent sign.
+                        // i18n: %1 is the charge percentage value; the trailing % is a literal percent sign.
                         text: i18n("%1%", modelData.percentage)
                         color: batteryColor(modelData.percentage, modelData.charging)
                         font.family: Plasmoid.configuration.fontFamily !== "" ? Plasmoid.configuration.fontFamily : Kirigami.Theme.smallFont.family
@@ -326,6 +326,8 @@ PlasmoidItem {
                         text: "⚡︎"
                         color: batteryColor(modelData.percentage, modelData.charging)
                         font.family: Plasmoid.configuration.fontFamily !== "" ? Plasmoid.configuration.fontFamily : Kirigami.Theme.smallFont.family
+                        font.weight: Plasmoid.configuration.fontBold ? Plasmoid.configuration.fontWeight : Font.Normal
+                        font.italic: Plasmoid.configuration.fontItalic
                         font.pixelSize: Plasmoid.configuration.useCustomFontSize ? Plasmoid.configuration.customFontSize : Kirigami.Theme.smallFont.pixelSize
                         Layout.alignment: Qt.AlignCenter
                         horizontalAlignment: Text.AlignHCenter
