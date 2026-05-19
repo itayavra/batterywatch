@@ -1,0 +1,386 @@
+# Translation of batterywatch in LANGUAGE
+# Copyright (C) 2026
+# This file is distributed under the same license as the batterywatch package.
+# TheDogORB <thedogorb@proton.me>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: batterywatch\n"
+"Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
+"POT-Creation-Date: 2026-05-18 02:43+0300\n"
+"PO-Revision-Date: 2026-05-18 17:22+2\n"
+"Last-Translator: TheDogORB <thedogorb@proton.me> \n"
+"Language-Team: \n"
+"Language: cs\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../metadata.desktop
+msgid "BatteryWatch"
+msgstr "BatteryWatch"
+
+#: ../contents/config/config.qml
+msgid "Appearance"
+msgstr "Vzhled"
+
+#: ../contents/config/config.qml
+msgid "Integrations"
+msgstr "Integrace"
+
+#: ../contents/config/config.qml
+msgid "Advanced settings"
+msgstr "Pokročilá nastavení"
+
+#: ../contents/ui/config/AdvancedSettings.qml
+msgid "Toggle Debug mode"
+msgstr "Přepnout ladicí režim"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "System Default (%1)"
+msgstr "Systémová (%1)"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Tray Settings"
+msgstr "Nastavení lišty"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Font family:"
+msgstr "Rodina písma:"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Change the font family used for system tray text."
+msgstr "Změní rodinu písma užitou pro text systémové lišty."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Style"
+msgstr "Styl"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Bold"
+msgstr "Tučně"
+
+#: ../contents/ui/config/Appearance.qml
+msgid ""
+"Make the tray text bold.\n"
+"Adjust weight between 100 and 1000."
+msgstr ""
+"Nastaví text v liště jako tučný.\n"
+"Váhu lze měnit od 100 do 1000."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Italic"
+msgstr "Kurzíva"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Make the tray text italic."
+msgstr "Nastaví text v liště na kurzívu."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Sizes"
+msgstr "Velikosti"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Font"
+msgstr "Písmo"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Adjust the size of tray text (in pixels)."
+msgstr "Změní velikost písma v liště (v pixelech)."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Icon"
+msgstr "Ikona"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Adjust the size of tray icons (in pixels)."
+msgstr "Změní velikost ikony v liště (v pixelech)."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Charging indicator"
+msgstr "Indikátor nabíjení"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Show charging indicator in tray"
+msgstr "Zobrazit indikátor nabíjení v liště"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Battery Colors"
+msgstr "Barvy Baterie"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Default"
+msgstr "Základní"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Use when no other color state applies. When disabled, system color is used instead."
+msgstr "Použita tehdy, kdy není aplikována žádná jiná barva. Při vypnutí je namísto této použita systémová barva."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Charging"
+msgstr "Nabíjení"
+
+#: ../contents/ui/config/Appearance.qml
+msgid ""
+"Overrides all other colors when device is charging.\n"
+"Not all devices are currently supported!"
+msgstr ""
+"Přepíše všechny ostatní barvy, pokud se zařízení nabíjí.\n"
+"Ne všechna zařízení jsou momentálně podporována!"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Zone 1"
+msgstr "Zóna 1"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "≤"
+msgstr "≤"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "%"
+msgstr "%"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Applied when battery falls below the set threshold."
+msgstr "Aplikováno, pokud baterie klesne pod nastavenou hodnotu."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Zone 2"
+msgstr "Zóna 2"
+
+#: ../contents/ui/config/Modules.qml
+msgid "OpenLinkHub Integration"
+msgstr "OpenLinkHub Integrace"
+
+#: ../contents/ui/config/Modules.qml
+msgid "Enable: "
+msgstr "Povolit: "
+
+#: ../contents/ui/config/Modules.qml
+msgid "Enabled"
+msgstr "Povoleno"
+
+#: ../contents/ui/config/Modules.qml
+msgid "Port: "
+msgstr "Port: "
+
+#: ../contents/ui/config/Modules.qml
+msgid "OpenRazer Integration"
+msgstr "OpenRazer Integrace"
+
+#: ../contents/ui/config/Modules.qml
+msgid "Enable"
+msgstr "Povol"
+
+#: ../contents/ui/config/Modules.qml
+msgid "Polling interval"
+msgstr "Interval dotazování"
+
+#: ../contents/ui/config/Modules.qml
+msgid "s"
+msgstr "s"
+
+#: ../contents/ui/config/Modules.qml
+msgid "KDE Connect Integration"
+msgstr "KDE Connect Integrace"
+
+#. i18n: %1 is the version number.
+#: ../contents/ui/main.qml
+msgid "BatteryWatch v%1"
+msgstr "BatteryWatch v%1"
+
+#: ../contents/ui/main.qml
+msgid "No connected devices"
+msgstr "Žádná připojená zařízení"
+
+#. i18n: %1 can be the device name or, in the case of multiple batteries, the battery label,
+#. or simply the word, ‘Battery’. %2 is the charge percentage value.
+#: ../contents/ui/main.qml
+msgid "%1: %2%"
+msgstr "%1: %2%"
+
+#. i18n: The delimiter when listing multiple batteries in the same device.
+#: ../contents/ui/main.qml
+msgid ", "
+msgstr ", "
+
+#. i18n: Used when there are multiple batteries in a device.
+#. %1 is the device name.
+#. %2 is the delimited list of the device's batteries and their charge percentages.
+#: ../contents/ui/main.qml
+msgid "%1 - %2"
+msgstr "%1 - %2"
+
+#: ../contents/ui/main.qml
+msgid "All devices hidden"
+msgstr "Veškerá zařízení jsou skryta"
+
+#. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
+#: ../contents/ui/main.qml
+msgid "%1%%2"
+msgstr "%1%%2"
+
+#: ../contents/ui/main.qml
+msgid "Device Battery Levels"
+msgstr "Úrovně Baterií Zařízení"
+
+#: ../contents/ui/main.qml
+msgid "Refresh"
+msgstr "Obnov"
+
+#: ../contents/ui/main.qml
+msgid "Refresh devices"
+msgstr "Obnov zařízení"
+
+#: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Unknown Device"
+msgstr "Neznámé Zařízení"
+
+#: ../contents/ui/main.qml
+msgid "Battery"
+msgstr "Baterie"
+
+#. i18n: %1 is the battery label or simply the word, ‘Battery’. %2 is the charge percentage value.
+#. %3 is a Unicode lightning symbol displayed when the device is charging.
+#: ../contents/ui/main.qml
+msgid "%1: <span style=\"color:%4\">%2%</span>%3"
+msgstr "%1: <span style=\"color:%4\">%2%</span>%3"
+
+#: ../contents/ui/main.qml
+msgid "Disconnect"
+msgstr "Odpoj"
+
+#: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/UPowerProvider.qml
+msgid "Disconnect device"
+msgstr "Odpoj zařízení"
+
+#: ../contents/ui/main.qml
+msgid "Hide"
+msgstr "Skryj"
+
+#: ../contents/ui/main.qml
+msgid "Show"
+msgstr "Zobraz"
+
+#: ../contents/ui/main.qml
+msgid "Hide from tray"
+msgstr "Skryj z lišty"
+
+#: ../contents/ui/main.qml
+msgid "Show in tray"
+msgstr "Zobraz v liště"
+
+#: ../contents/ui/main.qml
+msgid "No connected devices with battery info found"
+msgstr "Nebylo nalezeno žádné připojené zařízení s baterií"
+
+#: ../contents/ui/providers/CompanionProvider.qml
+msgid "BatteryWatch: Companion service disconnected"
+msgstr "BatteryWatch: Služba Companion odpojena"
+
+#: ../contents/ui/providers/CompanionProvider.qml
+msgid "BatteryWatch: Companion service connected"
+msgstr "BatteryWatch: Služba Companion připojena"
+
+#: ../contents/ui/providers/CompanionProvider.qml
+msgid "BatteryWatch: Failed to parse companion data:"
+msgstr "BatteryWatch: Nepodařilo se zpracovat data Companion služby:"
+
+#: ../contents/ui/providers/KDEConnectProvider.qml
+msgid "Unpair KDE Connect device"
+msgstr "Odpárovat KDE Connect zařízení"
+
+#: ../contents/ui/providers/KDEConnectProvider.qml
+msgid "BatteryWatch: KDE Connect daemon unavailable"
+msgstr "BatteryWatch: KDE Connect daemon není dostupný"
+
+#: ../contents/ui/providers/KDEConnectProvider.qml
+msgid "BatteryWatch: KDE Connect daemon connected"
+msgstr "BatteryWatch: KDE Connect daemon připojen"
+
+#. i18n: %1 is the number of devices found.
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Devices found: %1"
+msgstr "Nalezená zařízení: %1"
+
+#. i18n: %1 is the error.
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Server error: %1"
+msgstr "Serverová chyba: %1"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Server responded without any battery data!"
+msgstr "Server odpověděl bez dat baterie!"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Failed to parse battery data:"
+msgstr "Nepodařilo se zpracovat data baterie:"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Invalid battery data received:"
+msgstr "Byla obdržena neplatná data baterie:"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Invalid device data for serial:"
+msgstr "Neplatná data zařízení pro sériové číslo:"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Error processing battery data:"
+msgstr "Chyba zpracování dat baterie:"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Invalid battery device data, skipping"
+msgstr "Neplatná data baterie zařízení, přeskakuji"
+
+#. i18n: %1 is the serial number of the device.
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Device '%1' is not connected, removing."
+msgstr "Zařízení '%1' není připojeno, odstraňuji."
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Processed devices:"
+msgstr "Zpracovaná zařízení:"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Invalid device data received for device creation"
+msgstr "Byla přijata neplatná data zařízení pro vytvoření záznamu"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Invalid battery device data for device creation"
+msgstr "Byla přijata neplatná data baterie pro vytvoření záznamu"
+
+#. i18n: %1 is the serial number of the device.
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Device '%1' is not connected, skipping."
+msgstr "Zařízení '%1' není připojeno, přeskakuji."
+
+#. i18n: %1 is the serial number of the device.
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Fetching device data for serial: %1"
+msgstr "Shromažďuji data pro sériové číslo: %1"
+
+#. i18n: %1 is the serial number of the device.
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Successfully fetched device data for serial: %1"
+msgstr "Data úspěšně shromážděna pro zařízení se sériovým číslem: %1"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Failed to parse device data:"
+msgstr "Nepodařilo se zpracovat data zařízení:"
+
+#. i18n: %1 is the serial number of the device.
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Server error fetching device '%1':"
+msgstr "Chyba serveru při načítání zařízení '%1':"
+
+#: ../contents/ui/providers/OpenRazerProvider.qml
+msgid "Unknown Razer Device"
+msgstr "Neznámé Razer Zařízení"
+
+#. i18n: Used when a device is known by BatteryWatch to be misreported by UPower.
+#. %1 is the device's model name. %2 is the erroneously reported device type (e.g.: ‘mouse’).
+#. %3 is the correct device type.
+#: ../contents/ui/providers/UPowerProvider.qml
+msgid "BatteryWatch: Applying UPower device override for '%1': %2 -> %3"
+msgstr "BatteryWatch: Aplikuji přepis UPower zařízení pro '%1': %2 -> %3"
