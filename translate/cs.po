@@ -1,4 +1,4 @@
-# Translation of batterywatch in LANGUAGE
+# Translation of batterywatch in cs
 # Copyright (C) 2026
 # This file is distributed under the same license as the batterywatch package.
 # TheDogORB <thedogorb@proton.me>, 2026.
@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-05-18 02:43+0300\n"
+"POT-Creation-Date: 2026-05-20 00:25+0300\n"
 "PO-Revision-Date: 2026-05-18 17:22+2\n"
 "Last-Translator: TheDogORB <thedogorb@proton.me> \n"
 "Language-Team: \n"
@@ -96,6 +96,14 @@ msgstr "Ikona"
 #: ../contents/ui/config/Appearance.qml
 msgid "Adjust the size of tray icons (in pixels)."
 msgstr "Změní velikost ikony v liště (v pixelech)."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Spacing"
+msgstr ""
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Adjust the gap between tray icons (in pixels)."
+msgstr ""
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Charging indicator"
@@ -216,10 +224,10 @@ msgstr "%1 - %2"
 msgid "All devices hidden"
 msgstr "Veškerá zařízení jsou skryta"
 
-#. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
+#. i18n: %1 is the charge percentage value. %% is a literal percent sign.
 #: ../contents/ui/main.qml
-msgid "%1%%2"
-msgstr "%1%%2"
+msgid "%1%"
+msgstr ""
 
 #: ../contents/ui/main.qml
 msgid "Device Battery Levels"
@@ -270,6 +278,11 @@ msgstr "Skryj z lišty"
 #: ../contents/ui/main.qml
 msgid "Show in tray"
 msgstr "Zobraz v liště"
+
+#. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
+#: ../contents/ui/main.qml
+msgid "%1%%2"
+msgstr "%1%%2"
 
 #: ../contents/ui/main.qml
 msgid "No connected devices with battery info found"
