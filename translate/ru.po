@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-05-18 02:43+0300\n"
+"POT-Creation-Date: 2026-05-20 00:25+0300\n"
 "PO-Revision-Date: 2026-05-18 02:44+0300\n"
 "Last-Translator: dev <dd3v@altmails.com>\n"
 "Language-Team: Russian <gnu@d07.ru>\n"
@@ -96,6 +96,14 @@ msgstr "Значок"
 #: ../contents/ui/config/Appearance.qml
 msgid "Adjust the size of tray icons (in pixels)."
 msgstr "Изменить размер значков в системном лотке (в пикселях)."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Spacing"
+msgstr ""
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Adjust the gap between tray icons (in pixels)."
+msgstr ""
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Charging indicator"
@@ -218,10 +226,10 @@ msgstr "%1 — %2"
 msgid "All devices hidden"
 msgstr "Все устройства скрыты"
 
-#. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
+#. i18n: %1 is the charge percentage value. %% is a literal percent sign.
 #: ../contents/ui/main.qml
-msgid "%1%%2"
-msgstr "%1%%2"
+msgid "%1%"
+msgstr ""
 
 #: ../contents/ui/main.qml
 msgid "Device Battery Levels"
@@ -272,6 +280,11 @@ msgstr "Скрыть из системного лотка"
 #: ../contents/ui/main.qml
 msgid "Show in tray"
 msgstr "Показать в системном лотке"
+
+#. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
+#: ../contents/ui/main.qml
+msgid "%1%%2"
+msgstr "%1%%2"
 
 #: ../contents/ui/main.qml
 msgid "No connected devices with battery info found"
