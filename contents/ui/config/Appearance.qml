@@ -116,7 +116,7 @@ KCMUtils.SimpleKCM {
             QQC2.CheckBox {
                 id: boldCheckBox
                 text: i18n("Bold")
-                QQL.Layout.preferredWidth: page.boxWidth
+                QQL.Layout.preferredWidth: Math.max(implicitWidth, useCustomFontSize.implicitWidth)
             }
 
             QQC2.SpinBox {
@@ -143,7 +143,7 @@ KCMUtils.SimpleKCM {
             QQC2.CheckBox {
                 id: italicCheckBox
                 text: i18n("Italic")
-                QQL.Layout.preferredWidth: page.boxWidth
+                QQL.Layout.preferredWidth: Math.max(implicitWidth, useCustomIconSize.implicitWidth)
             }
 
             // Invisible "italic spinbox" for the help icon to align properly
@@ -171,7 +171,7 @@ KCMUtils.SimpleKCM {
             QQC2.CheckBox {
                 id: useCustomFontSize
                 text: i18n("Font")
-                QQL.Layout.preferredWidth: page.boxWidth
+                QQL.Layout.preferredWidth: Math.max(implicitWidth, boldCheckBox.implicitWidth)
             }
 
             QQC2.SpinBox {
@@ -196,7 +196,7 @@ KCMUtils.SimpleKCM {
             QQC2.CheckBox {
                 id: useCustomIconSize
                 text: i18n("Icon")
-                QQL.Layout.preferredWidth: page.boxWidth
+                QQL.Layout.preferredWidth: Math.max(implicitWidth, italicCheckBox.implicitWidth)
             }
 
             QQC2.SpinBox {
