@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-05-18 01:17+0300\n"
+"POT-Creation-Date: 2026-05-18 02:43+0300\n"
 "PO-Revision-Date: 2026-01-03 16:20+0100\n"
 "Last-Translator: AzraelBunn\n"
 "Language-Team: \n"
@@ -222,7 +222,7 @@ msgstr "%1 - %2"
 msgid "All devices hidden"
 msgstr "Wszystkie urządzenia są ukryte"
 
-#. i18n: %1 is the charge percentage value. %% is a literal percent sign.
+#. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
 #: ../contents/ui/main.qml
 msgid "%1%"
 msgstr "%1%"

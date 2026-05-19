@@ -1,395 +1,388 @@
-# Translation of batterywatch in LANGUAGE
+# Translation of batterywatch in ru
 # Copyright (C) 2026
 # This file is distributed under the same license as the batterywatch package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# dev <dd3v@altmails.com>, 2026.
 #
-#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
 "POT-Creation-Date: 2026-05-18 02:43+0300\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"PO-Revision-Date: 2026-05-18 02:44+0300\n"
+"Last-Translator: dev <dd3v@altmails.com>\n"
+"Language-Team: Russian <gnu@d07.ru>\n"
+"Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
 #: ../metadata.desktop
 msgid "BatteryWatch"
-msgstr ""
+msgstr "BatteryWatch"
 
 #: ../contents/config/config.qml
 msgid "Appearance"
-msgstr ""
+msgstr "Оформление"
 
 #: ../contents/config/config.qml
 msgid "Integrations"
-msgstr ""
+msgstr "Интеграции"
 
 #: ../contents/config/config.qml
 msgid "Advanced settings"
-msgstr ""
+msgstr "Продвинутые настройки"
 
 #: ../contents/ui/config/AdvancedSettings.qml
 msgid "Toggle Debug mode"
-msgstr ""
+msgstr "Включить режим отладки"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "System Default (%1)"
-msgstr ""
+msgstr "По умолчанию (%1)"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Tray Settings"
-msgstr ""
+msgstr "Настройки системного лотка"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Font family:"
-msgstr ""
+msgstr "Семейство шрифтов:"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Change the font family used for system tray text."
-msgstr ""
+msgstr "Изменить семейство шрифтов, используемое для текста в системном лотке."
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Style"
-msgstr ""
+msgstr "Стиль"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Bold"
-msgstr ""
+msgstr "Жирный"
 
 #: ../contents/ui/config/Appearance.qml
 msgid ""
 "Make the tray text bold.\n"
 "Adjust weight between 100 and 1000."
 msgstr ""
+"Использовать жирный шрифт для текста в системном лотке.\n"
+"Толщина шрифта: от 100 до 1000."
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Italic"
-msgstr ""
+msgstr "Курсив"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Make the tray text italic."
-msgstr ""
+msgstr "Использовать курсив для текста в системном лотке."
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Sizes"
-msgstr ""
+msgstr "Размеры"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Font"
-msgstr ""
+msgstr "Шрифт"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Adjust the size of tray text (in pixels)."
-msgstr ""
+msgstr "Изменить размер текста в системном лотке (в пикселях)."
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Icon"
-msgstr ""
+msgstr "Значок"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Adjust the size of tray icons (in pixels)."
-msgstr ""
-
-#: ../contents/ui/config/Appearance.qml
-msgid "Spacing"
-msgstr ""
-
-#: ../contents/ui/config/Appearance.qml
-msgid "Adjust the gap between tray icons (in pixels)."
-msgstr ""
+msgstr "Изменить размер значков в системном лотке (в пикселях)."
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Charging indicator"
-msgstr ""
+msgstr "Индикатор зарядки"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Show charging indicator in tray"
-msgstr ""
+msgstr "Показывать индикатор зарядки в системном лотке"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Battery Colors"
-msgstr ""
+msgstr "Цвета батареи"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Default"
-msgstr ""
+msgstr "По умолчанию"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Use when no other color state applies. When disabled, system color is used instead."
 msgstr ""
+"Используется, когда другие цветовые состояния не применяются.\n"
+"Если отключено, будет использоваться системный цвет."
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Charging"
-msgstr ""
+msgstr "Зарядка"
 
 #: ../contents/ui/config/Appearance.qml
 msgid ""
 "Overrides all other colors when device is charging.\n"
 "Not all devices are currently supported!"
 msgstr ""
+"Переопределяет все остальные цвета во время зарядки устройства.\n"
+"Поддерживаются не все устройства!"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Zone 1"
-msgstr ""
+msgstr "Зона 1"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "≤"
-msgstr ""
+msgstr "≤"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "%"
-msgstr ""
+msgstr "%"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Applied when battery falls below the set threshold."
-msgstr ""
+msgstr "Применяется, когда заряд батареи опускается ниже заданного порога."
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Zone 2"
-msgstr ""
+msgstr "Зона 2"
 
 #: ../contents/ui/config/Modules.qml
 msgid "OpenLinkHub Integration"
-msgstr ""
+msgstr "Интеграция с OpenLinkHub"
 
 #: ../contents/ui/config/Modules.qml
 msgid "Enable: "
-msgstr ""
+msgstr "Включить: "
 
 #: ../contents/ui/config/Modules.qml
 msgid "Enabled"
-msgstr ""
+msgstr "Включено"
 
 #: ../contents/ui/config/Modules.qml
 msgid "Port: "
-msgstr ""
+msgstr "Порт: "
 
 #: ../contents/ui/config/Modules.qml
 msgid "OpenRazer Integration"
-msgstr ""
+msgstr "Интеграция с OpenRazer"
 
 #: ../contents/ui/config/Modules.qml
 msgid "Enable"
-msgstr ""
+msgstr "Включить"
 
 #: ../contents/ui/config/Modules.qml
 msgid "Polling interval"
-msgstr ""
+msgstr "Интервал опроса"
 
 #: ../contents/ui/config/Modules.qml
 msgid "s"
-msgstr ""
+msgstr "с"
 
 #: ../contents/ui/config/Modules.qml
 msgid "KDE Connect Integration"
-msgstr ""
+msgstr "Интеграция с KDE Connect"
 
 #. i18n: %1 is the version number.
 #: ../contents/ui/main.qml
 msgid "BatteryWatch v%1"
-msgstr ""
+msgstr "BatteryWatch v%1"
 
 #: ../contents/ui/main.qml
 msgid "No connected devices"
-msgstr ""
+msgstr "Нет подключённых устройств"
 
 #. i18n: %1 can be the device name or, in the case of multiple batteries, the battery label,
 #. or simply the word, ‘Battery’. %2 is the charge percentage value.
 #: ../contents/ui/main.qml
 msgid "%1: %2%"
-msgstr ""
+msgstr "%1: %2%"
 
 #. i18n: The delimiter when listing multiple batteries in the same device.
 #: ../contents/ui/main.qml
 msgid ", "
-msgstr ""
+msgstr ", "
 
 #. i18n: Used when there are multiple batteries in a device.
 #. %1 is the device name.
 #. %2 is the delimited list of the device's batteries and their charge percentages.
 #: ../contents/ui/main.qml
 msgid "%1 - %2"
-msgstr ""
+msgstr "%1 — %2"
 
 #: ../contents/ui/main.qml
 msgid "All devices hidden"
-msgstr ""
+msgstr "Все устройства скрыты"
 
 #. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
 #: ../contents/ui/main.qml
-msgid "%1%"
-msgstr ""
+msgid "%1%%2"
+msgstr "%1%%2"
 
 #: ../contents/ui/main.qml
 msgid "Device Battery Levels"
-msgstr ""
+msgstr "Уровень заряда устройств"
 
 #: ../contents/ui/main.qml
 msgid "Refresh"
-msgstr ""
+msgstr "Обновить"
 
 #: ../contents/ui/main.qml
 msgid "Refresh devices"
-msgstr ""
+msgstr "Обновить устройства"
 
 #: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Unknown Device"
-msgstr ""
+msgstr "Неизвестное устройство"
 
 #: ../contents/ui/main.qml
 msgid "Battery"
-msgstr ""
+msgstr "Батарея"
 
 #. i18n: %1 is the battery label or simply the word, ‘Battery’. %2 is the charge percentage value.
 #. %3 is a Unicode lightning symbol displayed when the device is charging.
 #: ../contents/ui/main.qml
 msgid "%1: <span style=\"color:%4\">%2%</span>%3"
-msgstr ""
+msgstr "%1: <span style=\"color:%4\">%2%</span>%3"
 
 #: ../contents/ui/main.qml
 msgid "Disconnect"
-msgstr ""
+msgstr "Отключить"
 
 #: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/UPowerProvider.qml
 msgid "Disconnect device"
-msgstr ""
+msgstr "Отключить устройство"
 
 #: ../contents/ui/main.qml
 msgid "Hide"
-msgstr ""
+msgstr "Скрыть"
 
 #: ../contents/ui/main.qml
 msgid "Show"
-msgstr ""
+msgstr "Показать"
 
 #: ../contents/ui/main.qml
 msgid "Hide from tray"
-msgstr ""
+msgstr "Скрыть из системного лотка"
 
 #: ../contents/ui/main.qml
 msgid "Show in tray"
-msgstr ""
-
-#. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
-#: ../contents/ui/main.qml
-msgid "%1%%2"
-msgstr ""
+msgstr "Показать в системном лотке"
 
 #: ../contents/ui/main.qml
 msgid "No connected devices with battery info found"
-msgstr ""
+msgstr "Не найдено подключённых устройств с информацией о батарее"
 
 #: ../contents/ui/providers/CompanionProvider.qml
 msgid "BatteryWatch: Companion service disconnected"
-msgstr ""
+msgstr "BatteryWatch: служба компаньона отключена"
 
 #: ../contents/ui/providers/CompanionProvider.qml
 msgid "BatteryWatch: Companion service connected"
-msgstr ""
+msgstr "BatteryWatch: служба компаньона подключена"
 
 #: ../contents/ui/providers/CompanionProvider.qml
 msgid "BatteryWatch: Failed to parse companion data:"
-msgstr ""
+msgstr "BatteryWatch: не удалось обработать данные компаньона:"
 
 #: ../contents/ui/providers/KDEConnectProvider.qml
 msgid "Unpair KDE Connect device"
-msgstr ""
+msgstr "Отвязать устройство KDE Connect"
 
 #: ../contents/ui/providers/KDEConnectProvider.qml
 msgid "BatteryWatch: KDE Connect daemon unavailable"
-msgstr ""
+msgstr "BatteryWatch: служба KDE Connect недоступна"
 
 #: ../contents/ui/providers/KDEConnectProvider.qml
 msgid "BatteryWatch: KDE Connect daemon connected"
-msgstr ""
+msgstr "BatteryWatch: служба KDE Connect подключена"
 
 #. i18n: %1 is the number of devices found.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Devices found: %1"
-msgstr ""
+msgstr "Найдено устройств: %1"
 
 #. i18n: %1 is the error.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Server error: %1"
-msgstr ""
+msgstr "Ошибка сервера: %1"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Server responded without any battery data!"
-msgstr ""
+msgstr "Сервер ответил без данных о батарее!"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Failed to parse battery data:"
-msgstr ""
+msgstr "Не удалось обработать данные батареи:"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Invalid battery data received:"
-msgstr ""
+msgstr "Получены некорректные данные батареи:"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Invalid device data for serial:"
-msgstr ""
+msgstr "Некорректные данные устройства для серийного номера:"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Error processing battery data:"
-msgstr ""
+msgstr "Ошибка обработки данных батареи:"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Invalid battery device data, skipping"
-msgstr ""
+msgstr "Некорректные данные батареи устройства, пропуск"
 
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Device '%1' is not connected, removing."
-msgstr ""
+msgstr "Устройство «%1» не подключено, удаление."
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Processed devices:"
-msgstr ""
+msgstr "Обработанные устройства:"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Invalid device data received for device creation"
-msgstr ""
+msgstr "Получены некорректные данные для создания устройства"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Invalid battery device data for device creation"
-msgstr ""
+msgstr "Получены некорректные данные батареи для создания устройства"
 
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Device '%1' is not connected, skipping."
-msgstr ""
+msgstr "Устройство «%1» не подключено, пропуск."
 
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Fetching device data for serial: %1"
-msgstr ""
+msgstr "Получение данных устройства для серийного номера: %1"
 
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Successfully fetched device data for serial: %1"
-msgstr ""
+msgstr "Данные устройства для серийного номера %1 успешно получены"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Failed to parse device data:"
-msgstr ""
+msgstr "Не удалось обработать данные устройства:"
 
 #. i18n: %1 is the serial number of the device.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Server error fetching device '%1':"
-msgstr ""
+msgstr "Ошибка сервера при получении устройства «%1»:"
 
 #: ../contents/ui/providers/OpenRazerProvider.qml
 msgid "Unknown Razer Device"
-msgstr ""
+msgstr "Неизвестное устройство Razer"
 
 #. i18n: Used when a device is known by BatteryWatch to be misreported by UPower.
 #. %1 is the device's model name. %2 is the erroneously reported device type (e.g.: ‘mouse’).
 #. %3 is the correct device type.
 #: ../contents/ui/providers/UPowerProvider.qml
 msgid "BatteryWatch: Applying UPower device override for '%1': %2 -> %3"
-msgstr ""
+msgstr "BatteryWatch: применяется переопределение устройства UPower для «%1»: %2 -> %3"
