@@ -99,11 +99,11 @@ msgstr "Změní velikost ikony v liště (v pixelech)."
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Spacing"
-msgstr ""
+msgstr "Odsazení"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Adjust the gap between tray icons (in pixels)."
-msgstr ""
+msgstr "Změní velikost odsazení mezi ikonami v liště (v pixelech)."
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Charging indicator"
@@ -227,7 +227,7 @@ msgstr "Veškerá zařízení jsou skryta"
 #. i18n: %1 is the charge percentage value; the trailing % is a literal percent sign.
 #: ../contents/ui/main.qml
 msgid "%1%"
-msgstr ""
+msgstr "%1%"
 
 #: ../contents/ui/main.qml
 msgid "Device Battery Levels"
