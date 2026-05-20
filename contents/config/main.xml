@@ -48,6 +48,12 @@
     <entry name="customIconSize" type="Int">
       <default>22</default>
     </entry>
+    <entry name="useCustomTraySpacing" type="Bool">
+      <default>false</default>
+    </entry>
+    <entry name="customTraySpacing" type="Int">
+      <default>4</default>
+    </entry>
 
     <!-- Colors -->
     <entry name="useCustomDefaultColor" type="Bool">

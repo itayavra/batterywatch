@@ -87,12 +87,12 @@ For instructions on how to contribute translations, add new languages, or test c
 <!-- TRANSLATIONS_START -->
 | Locale | Language | Status | % Done |
 |--------|----------|--------|--------|
-| cs     | Czech        | ✅ Complete |   100% |
+| cs     | Cs           | 🟡 In Progress |    96% |
 | he     | Hebrew       | ✅ Complete |   100% |
 | hu     | Hungarian    | ✅ Complete |   100% |
 | nl     | Dutch        | ✅ Complete |   100% |
 | pl     | polish       | ✅ Complete |   100% |
-| ru     | Ru           | ✅ Complete |   100% |
+| ru     | Ru           | 🟡 In Progress |    96% |
 <!-- TRANSLATIONS_END -->
 
 
