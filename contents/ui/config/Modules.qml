@@ -16,6 +16,9 @@ KCMUtils.SimpleKCM {
     property alias cfg_enableKDEConnectIntegration: enableKDEConnectIntegration.checked
     property alias cfg_kdeConnectPollingTime: kdeConnectPollingTime.value
 
+    property alias cfg_enableBluezIntegration: enableBluezIntegration.checked
+    property alias cfg_bluezPollingTime: bluezPollingTime.value
+
     property alias cfg_enableHIDIntegration: enableHIDIntegration.checked
     property alias cfg_hidPollingTime: hidPollingTime.value
 
@@ -118,6 +121,46 @@ KCMUtils.SimpleKCM {
                 QQC2.ToolTip {
                     visible: kdeConnectPollingHelp.hovered
                     text: i18n("Sets the interval for KDE Connect device state updates.")
+                }
+            }
+        }
+
+        Item {
+            Kirigami.FormData.isSection: true
+            Kirigami.FormData.label: i18n("Bluez Integration")
+            // Reads Bluetooth device batteries directly from BlueZ (via BluezQt).
+        }
+
+        QQL.RowLayout {
+            Kirigami.FormData.label: i18n("Enable")
+
+            QQC2.CheckBox {
+                id: enableBluezIntegration
+            }
+        }
+
+        QQL.RowLayout {
+            Kirigami.FormData.label: i18n("Polling interval")
+
+            QQC2.SpinBox {
+                id: bluezPollingTime
+                enabled: enableBluezIntegration.checked
+                from: 1
+                to: 3600
+            }
+
+            QQC2.Label {
+                text: i18n("s")
+                opacity: enableBluezIntegration.checked ? 0.7 : 0.5
+            }
+
+            QQC2.ToolButton {
+                id: bluezPollingHelp
+                icon.name: "help-about"
+
+                QQC2.ToolTip {
+                    visible: bluezPollingHelp.hovered
+                    text: i18n("Sets the interval for polling BlueZ device battery updates.\nBlueZ also pushes updates via signals, so this is a safety net.")
                 }
             }
         }
