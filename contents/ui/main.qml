@@ -18,6 +18,13 @@ PlasmoidItem {
         id: upowerProvider
     }
 
+    BluezProvider {
+        id: bluezProvider
+        // Reads Bluetooth device batteries directly from BlueZ (via BluezQt).
+        // the Bluetooth GATT Battery Service but not through UPower.
+        // Placed after UPowerProvider so its data can override 0% UPower entries
+    }
+
     CompanionProvider {
         id: companionProvider
     }
@@ -38,8 +45,7 @@ PlasmoidItem {
         id: hidDevicesProvider
     }
 
-    // List of providers (in priority order)
-    property var providers: [upowerProvider, companionProvider, openLinkHubProvider, openRazerProvider, kdeConnectProvider, hidDevicesProvider]
+    property var providers: [upowerProvider, bluezProvider, companionProvider, openLinkHubProvider, openRazerProvider, kdeConnectProvider, hidDevicesProvider]
 
     // Debug mode
     property bool debugMode: Plasmoid.configuration.debugMode
@@ -160,11 +166,27 @@ PlasmoidItem {
 
             for (var i = 0; i < devices.length; i++) {
                 var device = devices[i];
-                var id = device.serial || device.objectPath || "";
+                // Normalise to lowercase for case-insensitive dedup
+                // the same device's Bluetooth MAC address can appear as "AA:BB:CC:..." from BluezProvider and
+                // "aa:bb:cc:..." from UPowerProvider, which causes a dublicate device, therefore avoiding dublication
+                var id = (device.serial || device.objectPath || "").toLowerCase();
 
-                if (id && !seenIds[id]) {
-                    merged.push(device);
-                    seenIds[id] = true;
+                if (id) {
+                    var existing = seenIds[id];
+                    if (existing === undefined) {
+                        merged.push(device);
+                        seenIds[id] = merged.length - 1;
+                    } else {
+                        var existingDevice = merged[existing];
+                        // When two providers report the same device, keep the
+                        // one with a valid >0% battery and discard the 0% entry.
+                        // This way BluezProvider's correct percentage replaces
+                        // UPowerProvider's 0%
+                        if ((existingDevice.percentage === undefined || existingDevice.percentage <= 0) &&
+                            device.percentage > 0) {
+                            merged[existing] = device;
+                        }
+                    }
                 }
             }
         }

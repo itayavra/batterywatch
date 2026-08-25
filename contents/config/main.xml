@@ -131,6 +131,15 @@
     </entry>
   </group>
 
+  <group name="Bluez">
+    <entry name="enableBluezIntegration" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="bluezPollingTime" type="Int">
+      <default>5</default>
+    </entry>
+  </group>
+
   <group name="HID">
     <entry name="enableHIDIntegration" type="Bool">
       <default>true</default>
