@@ -139,4 +139,13 @@
       <default>5</default>
     </entry>
   </group>
+
+  <group name="HeadsetControl">
+    <entry name="enableHeadsetControlIntegration" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="headsetControlPollingTime" type="Int">
+      <default>5</default>
+    </entry>
+  </group>
 </kcfg>
