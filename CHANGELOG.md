@@ -5,7 +5,7 @@
 ## [0.3.2] - 2026-08-22
 
 ### Added
-- **HeadsetControl integration** — new provider that reads battery levels from gaming headsets via the [HeadsetControl](https://github.com/Sapd/HeadsetControl) CLI tool (`headsetcontrol -o json`); covers SteelSeries Arctis series, HyperX Cloud models, Corsair VOID headsets, ROCCAT Elo, Audeze Maxwell, Sony INZONE and others that are not handled by the HID provider; requires `headsetcontrol` to be installed separately
+- **HeadsetControl integration** — new provider that reads battery levels from gaming headsets via the [HeadsetControl](https://github.com/Sapd/HeadsetControl) CLI tool (`headsetcontrol -o json`); covers SteelSeries Arctis series, HyperX Cloud models, Corsair VOID headsets, ROCCAT Elo, Audeze Maxwell, Sony INZONE and others; Logitech headsets are skipped (handled by the HID provider); requires `headsetcontrol` to be installed separately
 - **Keychron M5 support** — new request-response HID schema (0xB3:06 request / 0xB4 reply) reads the M5's battery over the vendor interface; works both wireless (Ultra-Link 8K dongle) and wired (USB-C); correct charging decode
 - **Logitech headset support** — battery levels of Logitech G533, G535, G PRO, G733, G933 and G935 headsets, read directly over HID++ request/response; raw battery voltage is mapped to a percentage via per-model calibration curves (protocol details from [HeadsetControl](https://github.com/Sapd/HeadsetControl) and [Solaar](https://github.com/pwr-Solaar-Solaar); not yet verified on real hardware — feedback welcome)
 - **ROG Azoth support** — battery level of the ASUS ROG Azoth keyboard over wired USB, the 2.4 GHz dongle and the ROG OMNI receiver, read directly via HID request/response with per-transport report formats (contributed by @LookforFPS)

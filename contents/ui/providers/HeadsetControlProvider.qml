@@ -5,17 +5,18 @@ import "../DeviceUtils.js" as DeviceUtils
 
 // HeadsetControl provider: reads battery from gaming headsets via the
 // headsetcontrol CLI tool (https://github.com/Sapd/HeadsetControl).
-// Covers SteelSeries, HyperX, Corsair, ROCCAT, Audeze, Sony and others
-// that are not handled by the HID provider.
+// Covers SteelSeries, HyperX, Corsair, ROCCAT, Audeze, Sony and others.
 //
 // Requires headsetcontrol to be installed and accessible in PATH.
-// Devices that overlap with the HID provider (Logitech) are deduplicated
-// by the merge layer since HID has higher priority.
+// Logitech devices (VID 0x046d) are skipped here because the HID provider
+// already handles them with direct protocol support.
 Item {
     id: root
     visible: false
 
     readonly property string binaryCmd: "headsetcontrol -o json"
+    // Logitech vendor ID — skipped to avoid duplicating HID provider devices
+    readonly property string logitechVid: "0x046d"
 
     property var devices: []
     property var pendingData: null
@@ -56,13 +57,18 @@ Item {
         const result = parsed
             .filter(d => {
                 if (!d.battery) return false
+                // Skip Logitech — HID provider handles those
+                if (d.id_vendor === logitechVid) return false
                 const status = d.battery.status
-                return status === "BATTERY_AVAILABLE" || status === "BATTERY_CHARGING"
+                if (status !== "BATTERY_AVAILABLE" && status !== "BATTERY_CHARGING") return false
+                // HeadsetControl may report level -1 while charging; skip those
+                if (typeof d.battery.level !== "number" || d.battery.level < 0) return false
+                return true
             })
             .map(d => ({
                 name: d.device || i18n("Unknown Headset"),
                 serial: "hc-" + d.id_vendor + ":" + d.id_product,
-                percentage: Math.max(0, d.battery.level || 0),
+                percentage: d.battery.level,
                 charging: d.battery.status === "BATTERY_CHARGING",
                 type: "headset",
                 icon: DeviceUtils.getIconForType("headset"),
@@ -104,33 +110,31 @@ Item {
                 return
             }
 
-            if (!data.stdout || data["exit code"] !== 0) {
-                if (root.binaryAvailable) {
-                    root.binaryAvailable = false
-                    root.devices = []
-                    console.log(i18n("BatteryWatch: headsetcontrol binary not found"))
+            // Try parsing stdout first — headsetcontrol exits 1 with valid
+            // JSON when no headsets are found (normal idle state).
+            if (data.stdout && data.stdout.trim()) {
+                try {
+                    const parsed = JSON.parse(data.stdout.trim())
+                    if (parsed && Array.isArray(parsed.devices)) {
+                        root.pendingData = parsed.devices
+                        if (!root.binaryAvailable) {
+                            root.binaryAvailable = true
+                            console.warn("BatteryWatch: headsetcontrol connected")
+                        }
+                        Qt.callLater(root.updateDevices)
+                        retryTimer.restart()
+                        return
+                    }
+                } catch (e) {
+                    // Unparseable output — fall through to unavailable handling
                 }
-                retryTimer.restart()
-                return
             }
 
-            try {
-                const parsed = JSON.parse(data.stdout.trim())
-                if (!parsed || !Array.isArray(parsed.devices)) {
-                    if (root.devices.length > 0)
-                        root.devices = []
-                    retryTimer.restart()
-                    return
-                }
-                root.pendingData = parsed.devices
-                if (!root.binaryAvailable) {
-                    root.binaryAvailable = true
-                    console.log(i18n("BatteryWatch: headsetcontrol connected"))
-                }
-                Qt.callLater(root.updateDevices)
-            } catch (e) {
-                console.warn(i18n("BatteryWatch: Failed to parse headsetcontrol output:"), e)
+            // No valid output — binary is missing or broken
+            if (root.binaryAvailable) {
+                root.binaryAvailable = false
                 root.devices = []
+                console.warn("BatteryWatch: headsetcontrol binary not found")
             }
             retryTimer.restart()
         }
