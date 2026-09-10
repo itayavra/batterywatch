@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- **Glorious wireless mouse support** — battery level of the Glorious Model O/O 2/O3, Model D/D-/D 2 PRO and Model I/I 2 wireless mice, read over the vendor HID feature report (`02 02 … 83`) on the mouse's vendor collection. The protocol carries no charging bit, so these mice always report as discharging
+
 ## [0.3.2] - 2026-08-22
 
 ### Added

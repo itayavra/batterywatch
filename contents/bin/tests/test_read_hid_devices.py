@@ -195,6 +195,55 @@ def install_g733_scenario(iface=3, usage_page=0xFF43):
     scenario["descriptors"] = {"hidraw8": hid_descriptor(usage_page)} if usage_page is not None else {}
     scenario["descriptor_reads"] = 0
 
+def hid_descriptor_pages(*pages):
+    # Descriptor declaring several usage pages, as real multi-collection
+    # interfaces do (one Global Usage Page item each).
+    out = b""
+    for page in pages:
+        out += bytes([0x05, page]) if page <= 0xFF else bytes([0x06, page & 0xFF, page >> 8])
+    return out + b"\xC0"
+
+def install_glorious_scenario(pid="00002022", usage_page=0xFF01, with_blocked=False):
+    # Glorious Model O Wireless: battery on the vendor collection, selected by
+    # report-descriptor usage page; answered over feature reports, not the
+    # interrupt endpoint.
+    scenario["uevents"] = {
+        "hidraw1": ("DRIVER=hid-generic\nHID_ID=0003:0000258A:%s\n"
+                    "HID_NAME=Glorious Model O Wireless\n"
+                    "HID_PHYS=usb-0000:00:14.0-3/input0\nHID_UNIQ=\n" % pid),
+        "hidraw2": ("DRIVER=hid-generic\nHID_ID=0003:0000258A:%s\n"
+                    "HID_NAME=Glorious Model O Wireless\n"
+                    "HID_PHYS=usb-0000:00:14.0-3/input1\nHID_UNIQ=\n" % pid),
+    }
+    scenario["fake_devs"] = {"/dev/hidraw1": 401, "/dev/hidraw2": 402}
+    scenario["deny"] = with_blocked
+    scenario["writes"] = []
+    scenario["write_data"] = []
+    scenario["reads"] = []
+    scenario["read_sizes"] = []
+    scenario["open_flags"] = []
+    scenario["reply_buf"] = bytearray(65)
+    scenario["reply_queue"] = []
+    scenario["reply_fd"] = 402
+    # only the vendor node (hidraw2) declares the battery usage page
+    scenario["descriptors"] = {"hidraw2": hid_descriptor(usage_page)}
+    scenario["descriptor_reads"] = 0
+    scenario["ioctls"] = []
+
+def set_glorious_reply(pct=42, state=0xA1, cmd=0x83):
+    buf = bytearray(65)
+    buf[1] = state
+    buf[6] = cmd
+    buf[8] = pct
+    scenario["reply_buf"] = buf
+
+def fake_ioctl(fd, request, buf):
+    scenario["ioctls"].append((fd, request, bytes(buf)))
+    # GET_FEATURE (nr 0x07) fills the caller's mutable buffer with the reply
+    if (request & 0xFF) == 0x07 and fd == scenario["reply_fd"]:
+        buf[:] = scenario["reply_buf"][:len(buf)]
+    return 0
+
 def install_azoth_scenario(pid="00001ACE", with_blocked=False):
     scenario["uevents"] = {
         "hidraw7": azoth_uevent("hidraw7", pid, 0),
@@ -252,6 +301,8 @@ def patch_module():
     rhd.os.read = fake_read
     rhd.os.close = lambda fd: None
     rhd.select.poll = FakePoller
+    rhd.fcntl.ioctl = fake_ioctl
+    rhd.time.sleep = lambda _s: None
 
 def run_main_capture():
     out = io.StringIO()
@@ -669,6 +720,8 @@ def test_simulate_both_blocked_before_any_rule():
              "unblock_command": rhd.udev_unblock_command(0x28de), "deviceType": "gamepad"},
             {"name": "Logitech G733", "serial": "sim-g733", "blocked": True, "vid": "046d", "pid": "0ab5",
              "unblock_command": rhd.udev_unblock_command(0x046d), "deviceType": "audio-headset"},
+            {"name": "Glorious Model O Wireless", "serial": "sim-glorious-model-o", "blocked": True, "vid": "258a", "pid": "2022",
+             "unblock_command": rhd.udev_unblock_command(0x258a), "deviceType": "mouse"},
         ]
 
 def test_simulate_m5_reports_after_its_rule():
@@ -681,6 +734,8 @@ def test_simulate_m5_reports_after_its_rule():
              "unblock_command": rhd.udev_unblock_command(0x28de), "deviceType": "gamepad"},
             {"name": "Logitech G733", "serial": "sim-g733", "blocked": True, "vid": "046d", "pid": "0ab5",
              "unblock_command": rhd.udev_unblock_command(0x046d), "deviceType": "audio-headset"},
+            {"name": "Glorious Model O Wireless", "serial": "sim-glorious-model-o", "blocked": True, "vid": "258a", "pid": "2022",
+             "unblock_command": rhd.udev_unblock_command(0x258a), "deviceType": "mouse"},
         ]
 
 def test_simulate_both_report_after_both_rules():
@@ -693,6 +748,8 @@ def test_simulate_both_report_after_both_rules():
             {"name": "Steam Controller 2", "serial": "sim-steam-controller-2", "percentage": 85, "charging": True, "deviceType": "gamepad"},
             {"name": "Logitech G733", "serial": "sim-g733", "blocked": True, "vid": "046d", "pid": "0ab5",
              "unblock_command": rhd.udev_unblock_command(0x046d), "deviceType": "audio-headset"},
+            {"name": "Glorious Model O Wireless", "serial": "sim-glorious-model-o", "blocked": True, "vid": "258a", "pid": "2022",
+             "unblock_command": rhd.udev_unblock_command(0x258a), "deviceType": "mouse"},
         ]
 
 
@@ -854,6 +911,107 @@ def test_sc2_stream_read():
     assert sdev.desc.name == "Steam Controller 2"
     assert rhd.read_status(sdev) == {"percentage": 85, "charging": True}, "state=0x02 puck -> charging"
     assert scenario["writes"] == [], f"stream: no request written, got {scenario['writes']!r}"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Glorious (feature-report transport)
+# ══════════════════════════════════════════════════════════════════════════
+def test_glorious_reads_battery_over_feature_reports():
+    install_glorious_scenario()
+    set_glorious_reply(pct=42)
+    devs = rhd.find_devices()
+    assert len(devs) == 1, f"one entry per physical mouse, got {devs!r}"
+    dev = devs[0]
+    assert dev.devpath == "/dev/hidraw2", f"vendor usage-page node targeted, got {dev.devpath}"
+    assert dev.desc.name == "Glorious Model O Wireless", dev.desc.name
+
+    assert rhd.read_status(dev) == {"percentage": 42, "charging": False}
+
+    # exchange is SET_FEATURE then GET_FEATURE on the interrupt-free path
+    nrs = [req & 0xFF for _fd, req, _b in scenario["ioctls"]]
+    assert nrs == [0x06, 0x07], f"SET then GET feature, got {nrs!r}"
+    assert scenario["ioctls"][0][2] == rhd.GLORIOUS_REQUEST, "request packet sent verbatim"
+    assert scenario["ioctls"][0][2][3] == 0x02 and scenario["ioctls"][0][2][6] == 0x83
+    assert scenario["writes"] == [], "feature transport writes nothing to the endpoint"
+    assert scenario["reads"] == [], "feature transport reads nothing from the endpoint"
+    assert scenario["open_flags"] and all(f & os.O_RDWR for f in scenario["open_flags"]), \
+        "feature reports need the node opened read-write"
+
+def test_glorious_zero_percent_floors_at_one():
+    install_glorious_scenario()
+    set_glorious_reply(pct=0)
+    dev = rhd.find_devices()[0]
+    assert rhd.read_status(dev) == {"percentage": 1, "charging": False}
+
+def test_glorious_asleep_and_bad_echo_report_nothing():
+    for state, cmd, why in ((0xA4, 0x83, "asleep"), (0xA0, 0x83, "waking up"), (0xA1, 0x00, "not a battery reply")):
+        install_glorious_scenario()
+        set_glorious_reply(pct=42, state=state, cmd=cmd)
+        dev = rhd.find_devices()[0]
+        assert rhd.read_status(dev) is None, f"{why} -> no reading"
+
+def test_glorious_matches_any_vendor_usage_page():
+    # The exact vendor page differs per model; the reference implementation
+    # ranks pages rather than filtering, so any 0xffxx page must match.
+    for page in (0xFF01, 0xFF00, 0xFF02, 0xFFA0):
+        install_glorious_scenario(pid="00002034", usage_page=page)  # Model D 2 PRO dongle
+        set_glorious_reply(pct=77)
+        devs = rhd.find_devices()
+        assert len(devs) == 1, f"page {page:#06x}: expected a match, got {devs!r}"
+        assert devs[0].desc.name == "Glorious Model D 2 PRO", devs[0].desc.name
+        assert rhd.read_status(devs[0]) == {"percentage": 77, "charging": False}
+
+def test_glorious_non_vendor_pages_are_ignored():
+    install_glorious_scenario(usage_page=0x0C)  # consumer-control collection
+    assert rhd.find_devices() == [], "a non-vendor collection carries no battery"
+
+def test_glorious_prefers_the_best_ranked_vendor_node():
+    # Both nodes of the same physical mouse expose a vendor page; 0xff01 wins
+    # over 0xff00, matching the reference's interface scoring.
+    install_glorious_scenario()
+    scenario["descriptors"] = {"hidraw1": hid_descriptor(0xFF01), "hidraw2": hid_descriptor(0xFF00)}
+    devs = rhd.find_devices()
+    assert len(devs) == 1, f"still one physical mouse, got {devs!r}"
+    assert devs[0].devpath == "/dev/hidraw1", f"0xff01 outranks 0xff00, got {devs[0].devpath}"
+
+def test_glorious_blocked_reports_udev_rule_with_write_access():
+    install_glorious_scenario(with_blocked=True)
+    with sandboxed_rules():
+        entries = json.loads(run_main_capture())
+    assert len(entries) == 1 and entries[0]["blocked"] is True, entries
+    assert entries[0]["vid"] == "258a" and entries[0]["pid"] == "2022", entries
+    assert entries[0]["deviceType"] == "mouse", entries
+    rule = rhd.udev_rule_for(0x258A)
+    assert 'MODE="0660"' in rule, "feature reports need write access in the udev rule"
+    assert 'ATTRS{idProduct}=="2022"' in rule and 'ATTRS{idProduct}=="201a"' in rule, rule
+
+
+def test_glorious_real_model_o_wireless_node_layout():
+    # Node layout captured from real hardware (258a:2022, diagnose.py): three
+    # interfaces, none declaring 0xff01/0xff00 - the vendor collection sits on
+    # 0xffa0/0xffff. All three answer the battery query; iface 2 is the
+    # best-ranked vendor node and must be the one picked.
+    install_glorious_scenario()
+    scenario["uevents"] = {
+        f"hidraw{n}": ("DRIVER=hid-generic\nHID_ID=0003:0000258A:00002022\n"
+                       "HID_NAME=Glorious Model O Wireless\n"
+                       f"HID_PHYS=usb-0000:02:00.0-1/input{n}\nHID_UNIQ=000000000000\n")
+        for n in (0, 1, 2)
+    }
+    scenario["fake_devs"] = {f"/dev/hidraw{n}": 400 + n for n in (0, 1, 2)}
+    scenario["descriptors"] = {
+        "hidraw0": hid_descriptor_pages(0x01, 0x02, 0x09, 0x0C),
+        "hidraw1": hid_descriptor_pages(0x01, 0x07, 0x08, 0x0C, 0xFFA0, 0xFFFF),
+        "hidraw2": hid_descriptor_pages(0xFFFF),
+    }
+    scenario["reply_fd"] = 402
+    set_glorious_reply(pct=0x5D)  # the byte the real mouse returned
+
+    devs = rhd.find_devices()
+    assert len(devs) == 1, f"one entry for the mouse, got {devs!r}"
+    assert devs[0].devpath == "/dev/hidraw2", f"best-ranked vendor node, got {devs[0].devpath}"
+    assert devs[0].serial == "000000000000", devs[0].serial
+    assert rhd.read_status(devs[0]) == {"percentage": 93, "charging": False}
 
 
 # ══════════════════════════════════════════════════════════════════════════

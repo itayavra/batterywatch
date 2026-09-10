@@ -31,7 +31,9 @@
 | **OpenLinkHub** | Corsair and other devices managed by [OpenLinkHub](https://github.com/jurkovic-nikola/OpenLinkHub) |
 | **OpenRazer** | Razer peripherals via [OpenRazer](https://openrazer.github.io/) |
 | **KDE Connect** | Battery levels of paired KDE Connect devices (phones, tablets, etc), with easy unpair action |
-| **HID Devices** | Peripherals read directly via Linux HID (currently supports Steam Controller 2, Keychron M5, ROG Azoth, and Logitech G533/G535/G Pro/G733/G933/G935 headsets) |
+| **HID Devices** | Peripherals read directly via Linux HID (currently supports Steam Controller 2, Keychron M5, ROG Azoth, Glorious wireless mice, and Logitech G533/G535/G Pro/G733/G933/G935 headsets) |
+
+> **Note:** The Glorious mouse protocol (vendor feature report `02 02 ... 83`, PID list) is taken from the `glorious-mouse` reference implementation; it reports charge level only, so Glorious mice are never shown as charging. Not verified on real hardware.
 
 > **Note:** Protocol details (commands, PIDs, and battery calibration curves) for the Logitech headsets are sourced from [HeadsetControl](https://github.com/Sapd/HeadsetControl) (GPL-3.0) and [Solaar](https://github.com/pwr-Solaar-Solaar), with attribution in `contents/bin/read_hid_devices`. None of the models has been verified on real hardware yet: support for G533, G535, G733, G933, G935 and G PRO X follows Solaar's device data, while G733 v3, G PRO and G PRO X v0 are protocol-shared extrapolations.
 

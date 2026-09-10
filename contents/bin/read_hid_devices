@@ -18,6 +18,7 @@ Organized in sections mirroring the concerns:
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import re
@@ -47,11 +48,15 @@ class DeviceType(Enum):
     HEADPHONES  = "audio-headphones"
     HEADSET     = "audio-headset"
 
+# usage_page sentinel: any vendor-defined page (0xff00-0xffff). Used when the
+# battery collection's exact page varies across a family (e.g. Glorious mice).
+VENDOR_USAGE_PAGE = "vendor"
+
 class DeviceVariant(NamedTuple):
     pid:         int         # Product ID
     iface:       int | None  # Interface
-    usage_page:  int | None = None  # Report-descriptor usage page of the battery node
-    source:      InputStreamSchema | RequestSchema | None = None  # Optional schema overriding the device default
+    usage_page:  int | str | None = None  # Report-descriptor usage page of the battery node, or VENDOR_USAGE_PAGE
+    source:      InputStreamSchema | RequestSchema | FeatureReportSchema | None = None  # Optional schema overriding the device default
 
 class DataPos(NamedTuple):
     report_id:  int     # Report/msg ID e.g. 0x43
@@ -94,6 +99,20 @@ class RequestSchema(NamedTuple):
 
     def poll_timeout(self) -> float:
         return self.timeout
+
+# Device answers a vendor *feature* report (e.g. Glorious wireless mice): the
+# request is SET_FEATURE'd, then the same report ID is GET_FEATURE'd back.
+# No interrupt endpoint is involved, so there is no poll loop.
+class FeatureReportSchema(NamedTuple):
+    charge:       DataPos
+    charge_range: tuple[int, int] | None
+    status:       DataPos | ChargingStates | None
+    request:      bytes                       # byte 0 = report ID, as hidraw expects
+    settle:       float = 0.05                # pause before reading the reply back
+
+# Both request-style schemas send a packet, so their node must be opened R/W
+def needs_write(schema):
+    return isinstance(schema, (RequestSchema, FeatureReportSchema))
 
 # All DataPos referenced by a schema
 def schema_positions(schema):
@@ -154,7 +173,7 @@ class Device(NamedTuple):
     device_type:    DeviceType                           # "gamepad", "mouse" etc. see DeviceUtils.js for all supported types
     vid:            int                                  # Vendor ID
     variants:       tuple[DeviceVariant, ...]            # VID, PID, iface used by device - used as path for where to look up device data
-    source:         InputStreamSchema | RequestSchema    # How power is read
+    source:         InputStreamSchema | RequestSchema | FeatureReportSchema  # How power is read
     parse:          Callable | None                      # Custom parser: parse(buffers) -> {"percentage", "charging"} | None | KEEP_READING (not a battery frame, keep waiting); None = generic interpret()
     serial_resolver: Callable | None = None              # Optional resolver(path, vid, pid, uevent_fields) -> serial
 
@@ -227,6 +246,60 @@ def _azoth_serial_resolver(path, vid, pid, fields):
     return (usb_serial(path, vid, pid)
             or printable_serial(fields.get("HID_UNIQ", ""))
             or "unknown-hid")
+
+
+# ── Glorious wireless mice ─────────────────────────────────────────────────
+# Protocol per the glorious-mouse reference implementation: SET a 65-byte
+# vendor feature report (byte 3 = 0x02 command class, byte 4 = 0x02 length,
+# byte 6 = 0x83 "read battery"), then GET the same report back. Report ID is
+# 0, which hidraw keeps in byte 0 of the buffer, so every offset below matches
+# the hidapi-based reference one-for-one.
+# The battery lives on the vendor collection; like the reference's interface
+# scoring, it is identified by report-descriptor usage page 0xff01 or 0xff00.
+GLORIOUS_REQUEST = bytes.fromhex("00000002020083") + b"\x00" * 58
+
+# Reply: byte 1 = link state, byte 6 echoes 0x83, byte 8 = charge percent.
+# Only state 0xA1 is a live reading - 0xA4 (asleep) and 0xA0 (waking) carry no
+# usable value, so the device is simply omitted until it answers properly.
+# ponytail: the protocol exposes no charging bit (the reference infers it from
+# a user-supplied "wired" flag), so charging is always False. Upgrade path:
+# decode it here if a charge flag is ever found in the reply.
+def _glorious_parse(buffers):
+    buf = buffers[0x00]
+    if buf[6] != 0x83 or buf[1] != 0xA1:
+        return None
+    return {"percentage": max(1, min(buf[8], 100)), "charging": False}
+
+# vid, display name, PIDs (from the reference devices.json; wired-only models
+# have no battery and are left out)
+_GLORIOUS_MODELS = (
+    (0x258A, "Glorious Model O Wireless",    (0x2022,)),
+    (0x258A, "Glorious Model O 2 Wireless",  (0x2033,)),
+    (0x258A, "Glorious Model D Wireless",    (0x2011, 0x2023)),
+    (0x258A, "Glorious Model D- Wireless",   (0x2025,)),
+    (0x258A, "Glorious Model D 2 PRO",       (0x2036, 0x2034, 0x201A)),
+    (0x22D4, "Glorious Model I",             (0x1503,)),
+    (0x093A, "Glorious Model I 2 Wireless",  (0x821A, 0x821D)),
+    (0x3794, "Glorious Model O3 Wireless",   (0xA300, 0xA312)),
+)
+
+def _glorious_mice():
+    return [
+        Device(
+            name=name,
+            device_type=DeviceType.MOUSE,
+            vid=vid,
+            variants=tuple(DeviceVariant(pid, None, VENDOR_USAGE_PAGE) for pid in pids),
+            source=FeatureReportSchema(
+                charge=DataPos(0x00, 8),
+                charge_range=None,
+                status=None,
+                request=GLORIOUS_REQUEST,
+            ),
+            parse=_glorious_parse,
+        )
+        for vid, name, pids in _GLORIOUS_MODELS
+    ]
 
 
 KNOWN_DEVICES = [
@@ -347,7 +420,7 @@ KNOWN_DEVICES = [
     _logitech_headset("Logitech G533", (0x07, 0x01), G533_CURVE, 0x0A66),
     _logitech_headset("Logitech G535", (0x05, 0x0D), G535_CURVE, 0x0AC4, usage_page=None, iface=3),
     _logitech_headset("Logitech G PRO Series", (0x06, 0x0D), GPRO_CURVE, 0x0AA7, 0x0AAA, 0x0ABA),
-]
+] + _glorious_mice()
 
 # PIDs whose variants select the battery node by report-descriptor usage page
 _USAGE_PAGE_PIDS = {variant.pid for dev in KNOWN_DEVICES for variant in dev.variants if variant.usage_page is not None}
@@ -357,7 +430,7 @@ class FoundDevice(NamedTuple):
     serial:  str
     desc:    Device
     pid:     int       # Product ID that actually matched (from sysfs)
-    source:  InputStreamSchema | RequestSchema
+    source:  InputStreamSchema | RequestSchema | FeatureReportSchema
 
 # ══════════════════════════════════════════════════════════════════════════
 # hid - sysfs discovery + hidraw I/O
@@ -466,6 +539,21 @@ def hid_usage_pages(path):
     except OSError:
         return set()
 
+# Reference implementations locate the battery collection by preferring usage
+# page 0xff01, then 0xff00, then any other vendor-defined page (0xff00-0xffff),
+# and among equals the highest interface number. Mirrors glorious-mouse's
+# interface scoring, which ranks rather than filters.
+def node_rank(usage_pages, iface):
+    if 0xFF01 in usage_pages:
+        score = 0
+    elif 0xFF00 in usage_pages:
+        score = 1
+    elif any(page >= 0xFF00 for page in usage_pages):
+        score = 2
+    else:
+        score = 10
+    return score, -iface
+
 # Returns the matching Device and variant for a given vid/pid/iface, or None.
 # A variant may constrain the interface, the descriptor usage page, or both.
 def match_device(vid, pid, iface, usage_pages=None):
@@ -477,7 +565,13 @@ def match_device(vid, pid, iface, usage_pages=None):
                 continue
             # usage_page variants select the node by its report-descriptor page
             if variant.usage_page is not None:
-                if usage_pages and variant.usage_page in usage_pages:
+                if not usage_pages:
+                    continue
+                if variant.usage_page is VENDOR_USAGE_PAGE:
+                    # Exact vendor page differs per model, so match the range
+                    if any(page >= 0xFF00 for page in usage_pages):
+                        return dev, variant
+                elif variant.usage_page in usage_pages:
                     return dev, variant
                 continue
             # iface = None in a variant means any interface contains batt data
@@ -505,7 +599,7 @@ def udev_rule_path(vid):
 def _udev_mode_for(vid):
     for dev in KNOWN_DEVICES:
         if vid == dev.vid:
-            return "0660" if isinstance(dev.source, RequestSchema) else "0440"
+            return "0660" if needs_write(dev.source) else "0440"
     return "0660"
 
 # One udev rule line per connection variant of the device
@@ -542,16 +636,17 @@ def udev_unblock_command(vid):
 
 # Goes through /sys/class/hidraw* and collects all known interfaces
 def find_devices():
-    devices = []
-    seen = set()
+    # One entry per physical device: several of its hidraw nodes can match
+    # (iface=None, or a family matched on the vendor page range), so keep the
+    # best-ranked node per device while preserving discovery order.
+    best = {}
+    order = []
     try:
         entries = os.listdir("/sys/class/hidraw")
     except OSError:
-        return devices
+        return []
 
     for name in entries:
-        if len(devices) >= MAX_DEVICES:
-            break
         if name.startswith("."):
             continue
 
@@ -570,27 +665,28 @@ def find_devices():
                   if desc.serial_resolver is not None
                   else fields.get("HID_UNIQ", "") or "unknown-hid")
 
-        # One entry per physical device: iface=None matches every interface, so
-        # skip ones already taken (phys is shared across a device's interfaces)
+        # phys is shared across a device's interfaces, so it identifies the
+        # physical device; the best-ranked of its matching nodes wins.
         key = (desc.name, phys or name)
-        if key in seen:
+        rank = node_rank(usage_pages, iface)
+        if key not in best:
+            order.append(key)
+        elif rank >= best[key][0]:
             continue
-        seen.add(key)
 
         # Fall back to the physical path when the device reports no serial, so
         # multiple identical dongles get distinct ids.
         if serial == "unknown-hid":
             serial = phys or name
 
-        devices.append(FoundDevice(f"/dev/{name}", serial, desc, pid, variant.source or desc.source))
-    return devices
+        best[key] = (rank, FoundDevice(f"/dev/{name}", serial, desc, pid, variant.source or desc.source))
+    return [best[key][1] for key in order[:MAX_DEVICES]]
 
 # True when the device is present but its hidraw node can't be opened for the
 # access level the schema needs (missing udev rule). Asleep devices *can* be
 # opened, so this only fires for a genuine permissions problem.
 def is_blocked(dev):
-    needs_write = isinstance(dev.source, RequestSchema)
-    flags = os.O_RDWR if needs_write else os.O_RDONLY
+    flags = os.O_RDWR if needs_write(dev.source) else os.O_RDONLY
     try:
         fd = os.open(dev.devpath, flags | os.O_NONBLOCK)
         os.close(fd)
@@ -602,14 +698,14 @@ def is_blocked(dev):
 
 # Opens a hidraw device, sends request packet if schema requires it. Returns fd or None.
 def open_device(dev, schema):
-    needs_write = isinstance(schema, RequestSchema)
-    flags = os.O_RDWR if needs_write else os.O_RDONLY
+    write = needs_write(schema)
+    flags = os.O_RDWR if write else os.O_RDONLY
     try:
         fd = os.open(dev.devpath, flags | os.O_NONBLOCK)
     except OSError:
         return None
 
-    if needs_write:
+    if write:
         try:
             os.write(fd, schema.request)
         except OSError:
@@ -618,11 +714,44 @@ def open_device(dev, schema):
 
     return fd
 
+# hidraw feature-report ioctls: _IOC(READ|WRITE, 'H', nr, size)
+def _hidiocsfeature(size):
+    return (3 << 30) | (size << 16) | (ord('H') << 8) | 0x06
+
+def _hidiocgfeature(size):
+    return (3 << 30) | (size << 16) | (ord('H') << 8) | 0x07
+
+# Feature-report exchange: SET the request, pause, GET the reply on the same
+# report ID. For report ID 0 the kernel leaves byte 0 of the buffer alone and
+# fills from byte 1, which is the layout the vendor protocols document.
+def read_feature_status(dev, schema):
+    try:
+        fd = os.open(dev.devpath, os.O_RDWR | os.O_NONBLOCK)
+    except OSError:
+        return None
+
+    buf = bytearray(len(schema.request))
+    try:
+        fcntl.ioctl(fd, _hidiocsfeature(len(schema.request)), bytearray(schema.request))
+        time.sleep(schema.settle)
+        buf[0] = schema.request[0]
+        fcntl.ioctl(fd, _hidiocgfeature(len(buf)), buf)
+    except OSError:
+        return None
+    finally:
+        os.close(fd)
+
+    buffers = {buf[0]: bytes(buf)}
+    return dev.desc.parse(buffers) if dev.desc.parse is not None else interpret(schema, buffers)
+
 # Reads a device's power status: waits for the report(s) the schema needs or for
 # the schema's timeout. O_NONBLOCK + poll() makes it sleep in kernel with 0 CPU
 # utilisation. Returns status dict {"percentage", "charging"} or None.
 def read_status_hw(dev):
     schema = dev.source
+    if isinstance(schema, FeatureReportSchema):
+        return read_feature_status(dev, schema)
+
     needed = needed_reports(schema)
     # Most devices use 64-byte reports.  Some request-response devices, such
     # as the ROG Azoth, use a 65-byte report including report ID, so read at
@@ -695,6 +824,7 @@ _SIMULATE_DEVICES = [
     ("Keychron M5", "sim-keychron-m5", 0x3434, "d028", "mouse", 88, False),
     ("Steam Controller 2", "sim-steam-controller-2", 0x28DE, "1304", "gamepad", 85, True),
     ("Logitech G733", "sim-g733", 0x046D, "0ab5", "audio-headset", 64, True),
+    ("Glorious Model O Wireless", "sim-glorious-model-o", 0x258A, "2022", "mouse", 42, False),
 ]
 
 def _simulate():
