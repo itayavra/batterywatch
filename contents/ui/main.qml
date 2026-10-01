@@ -38,8 +38,12 @@ PlasmoidItem {
         id: hidDevicesProvider
     }
 
+    HeadsetControlProvider {
+        id: headsetControlProvider
+    }
+
     // List of providers (in priority order)
-    property var providers: [upowerProvider, companionProvider, openLinkHubProvider, openRazerProvider, kdeConnectProvider, hidDevicesProvider]
+    property var providers: [upowerProvider, companionProvider, openLinkHubProvider, openRazerProvider, kdeConnectProvider, hidDevicesProvider, headsetControlProvider]
 
     // Debug mode
     property bool debugMode: Plasmoid.configuration.debugMode

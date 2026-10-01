@@ -19,6 +19,9 @@ KCMUtils.SimpleKCM {
     property alias cfg_enableHIDIntegration: enableHIDIntegration.checked
     property alias cfg_hidPollingTime: hidPollingTime.value
 
+    property alias cfg_enableHeadsetControlIntegration: enableHeadsetControlIntegration.checked
+    property alias cfg_headsetControlPollingTime: headsetControlPollingTime.value
+
     Kirigami.FormLayout {
         id: page
 
@@ -157,6 +160,45 @@ KCMUtils.SimpleKCM {
                 QQC2.ToolTip {
                     visible: hidPollingHelp.hovered
                     text: i18n("Sets the interval for re-checking HID devices when none are connected.\nWhen a device is active, it updates automatically.")
+                }
+            }
+        }
+
+        Item {
+            Kirigami.FormData.isSection: true
+            Kirigami.FormData.label: i18n("HeadsetControl Integration")
+        }
+
+        QQL.RowLayout {
+            Kirigami.FormData.label: i18n("Enable")
+
+            QQC2.CheckBox {
+                id: enableHeadsetControlIntegration
+            }
+        }
+
+        QQL.RowLayout {
+            Kirigami.FormData.label: i18n("Polling interval")
+
+            QQC2.SpinBox {
+                id: headsetControlPollingTime
+                enabled: enableHeadsetControlIntegration.checked
+                from: 5
+                to: 3600
+            }
+
+            QQC2.Label {
+                text: i18n("s")
+                opacity: enableHeadsetControlIntegration.checked ? 0.7 : 0.5
+            }
+
+            QQC2.ToolButton {
+                id: headsetControlPollingHelp
+                icon.name: "help-about"
+
+                QQC2.ToolTip {
+                    visible: headsetControlPollingHelp.hovered
+                    text: i18n("Polls battery status via the headsetcontrol CLI tool.\nRequires headsetcontrol to be installed (https://github.com/Sapd/HeadsetControl).")
                 }
             }
         }
