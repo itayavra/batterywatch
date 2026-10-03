@@ -8,7 +8,7 @@ cd "$(dirname "$(readlink -f "$0")")"
 if [ "$#" -gt 0 ]; then
     suites=("$@")
 else
-    suites=(test_read_hid_devices.py)
+    suites=(test_read_hid_devices.py test_read_solaar_devices.py)
 fi
 
 failed=0

@@ -98,6 +98,18 @@ Item {
                 if (macMatch) {
                     device.bluetoothAddress = macMatch[1].replace(/[_\-]/g, ":").toUpperCase()
                 }
+            } else if (path.indexOf("hidpp") !== -1 && device.serial) {
+                // hidpp batteries put their transport in the serial: a fully
+                // colon-separated MAC means Bluetooth. Other transports (USB
+                // receiver, cable) report a dash-separated uniq or a raw
+                // HID++ serial - never a colon MAC - so nothing false-matches
+                var serialMac = device.serial.match(/^([0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2})$/i)
+                if (serialMac) {
+                    device.connectionType = root.bluetoothType
+                    device.bluetoothAddress = serialMac[1].replace(/[_\-]/g, ":").toUpperCase()
+                } else {
+                    device.connectionType = root.wirelessType
+                }
             } else {
                 device.connectionType = root.wirelessType
             }

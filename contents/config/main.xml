@@ -139,4 +139,13 @@
       <default>5</default>
     </entry>
   </group>
+
+  <group name="Solaar">
+    <entry name="enableSolaarIntegration" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="solaarPollingTime" type="Int">
+      <default>10</default>
+    </entry>
+  </group>
 </kcfg>

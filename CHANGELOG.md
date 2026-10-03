@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- **Bluetooth Logitech batteries had no disconnect action** — UPowerProvider classified Bluetooth only from the device's native-path, but for kernel `hidpp` batteries over Bluetooth the native-path is just `hidpp_battery_N` while the MAC sits in the serial field. A fully colon-separated MAC serial now marks the device as Bluetooth, restoring the disconnect button; USB-receiver/cable transports report a dash-separated uniq or a raw HID++ serial and cannot match (their classification stays wireless)
+
+### Added
+- **Solaar support** — battery percentage, charging state and device type of Logitech HID++ devices via [Solaar](https://github.com/pwr-Solaar/Solaar)'s own library: everything Solaar supports — Unifying/Bolt/Lightspeed/Centurion receivers, wired and Bluetooth devices, headsets. Bluetooth devices get the disconnect action even when UPower does not see them; devices that are offline, asleep or without a battery are not shown (stateless polling, default 10s). Requires Solaar installed (distro package, pip or pipx); without it the integration stays quiet. Devices needing hidraw permission get the same lock icon + "Copy command" flow as the HID provider
+
 ## [0.3.2] - 2026-10-02
 
 ### Added

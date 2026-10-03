@@ -19,6 +19,9 @@ KCMUtils.SimpleKCM {
     property alias cfg_enableHIDIntegration: enableHIDIntegration.checked
     property alias cfg_hidPollingTime: hidPollingTime.value
 
+    property alias cfg_enableSolaarIntegration: enableSolaarIntegration.checked
+    property alias cfg_solaarPollingTime: solaarPollingTime.value
+
     Kirigami.FormLayout {
         id: page
 
@@ -157,6 +160,45 @@ KCMUtils.SimpleKCM {
                 QQC2.ToolTip {
                     visible: hidPollingHelp.hovered
                     text: i18n("Sets the interval for re-checking HID devices when none are connected.\nWhen a device is active, it updates automatically.")
+                }
+            }
+        }
+
+        Item {
+            Kirigami.FormData.isSection: true
+            Kirigami.FormData.label: i18n("Solaar Integration")
+        }
+
+        QQL.RowLayout {
+            Kirigami.FormData.label: i18n("Enable")
+
+            QQC2.CheckBox {
+                id: enableSolaarIntegration
+            }
+        }
+
+        QQL.RowLayout {
+            Kirigami.FormData.label: i18n("Polling interval")
+
+            QQC2.SpinBox {
+                id: solaarPollingTime
+                enabled: enableSolaarIntegration.checked
+                from: 5
+                to: 3600
+            }
+
+            QQC2.Label {
+                text: i18n("s")
+                opacity: enableSolaarIntegration.checked ? 0.7 : 0.5
+            }
+
+            QQC2.ToolButton {
+                id: solaarPollingHelp
+                icon.name: "help-about"
+
+                QQC2.ToolTip {
+                    visible: solaarPollingHelp.hovered
+                    text: i18n("Sets the interval for Solaar device state updates.\nRequires Solaar to be installed; Logitech devices only.")
                 }
             }
         }

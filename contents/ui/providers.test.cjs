@@ -22,6 +22,21 @@ const braceDelta = line => {
     return delta;
 };
 
+// Shared brace-balanced block scanner: from the line that opens a block, the
+// body lines (dedented by `dedent` spaces) and the line index that closes it.
+const blockAt = (lines, open, dedent) => {
+    const body = [];
+    let depth = 1;
+    let close = open;
+    for (let j = open + 1; depth > 0 && j < lines.length; j++) {
+        depth += braceDelta(lines[j]);
+        if (depth === 0) { close = j; break; }
+        body.push(dedent ? lines[j].replace(new RegExp(`^ {${dedent}}`), '') : lines[j]);
+    }
+    assert.equal(depth, 0, `braces did not balance from line ${open + 1}`);
+    return { body, close };
+};
+
 // Pull each `onNewData: (src, data) => { ... }` body out of a provider and
 // compile it, so the assertions run the provider's own source.
 function readHandlers(file) {
@@ -29,14 +44,9 @@ function readHandlers(file) {
     const found = [];
     for (let i = 0; i < lines.length; i++) {
         if (!/onNewData: \(src, data\) => \{/.test(lines[i])) continue;
-        const body = [];
-        let depth = 1;
-        for (let j = i + 1; depth > 0 && j < lines.length; j++) {
-            depth += braceDelta(lines[j]);
-            if (depth === 0) { i = j; break; }
-            body.push(lines[j].replace(/^ {12}/, ''));
-        }
-        const text = body.join('\n');
+        const block = blockAt(lines, i, 12);
+        i = block.close;
+        const text = block.body.join('\n');
         found.push({
             body: text,
             readsReply: text.includes('parseReply'),
@@ -45,6 +55,17 @@ function readHandlers(file) {
         });
     }
     return found;
+}
+
+// Pull a named function out of a provider QML file, so tests can call the
+// provider's own source under stubbed globals.
+function readFunction(file, name) {
+    const lines = fs.readFileSync(path.join(__dirname, 'providers', file), 'utf8').split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        if (!lines[i].includes(`function ${name}(`)) continue;
+        return blockAt(lines, i, 0).body.join('\n');
+    }
+    assert.fail(`function ${name} not found in ${file}`);
 }
 
 const kde = readHandlers('KDEConnectProvider.qml');
@@ -56,6 +77,41 @@ function byTag(list, tag) {
     assert.equal(hits.length, 1, `expected exactly one handler containing ${JSON.stringify(tag)}`);
     return hits[0];
 }
+
+// Calls a provider's function in a context that mirrors what the QML gives it.
+// Stubs are visible to the compiled code; parameters are passed at call time.
+function callFunction(source, name, params, stubs, ...args) {
+    const context = vm.createContext(stubs);
+    vm.runInContext(`function ${name}(${params}) {\n${source}\n}`, context);
+    return context[name](...args);
+}
+
+const upower = readFunction('UPowerProvider.qml', 'parseUPowerOutput');
+const UPOWER_ROOT = {
+    wiredType: 0, wirelessType: 1, bluetoothType: 2,
+    upowerDeviceTypeOverrides: {}
+};
+const UPOWER_STUBS = {
+    root: UPOWER_ROOT,
+    DeviceUtils: { getIconForType: t => `icon(${t})` },
+    i18n: s => s,
+    console: { log() {}, warn() {} }
+};
+const parseUpower = (output, objectPath = '/test') =>
+    callFunction(upower, 'parseUPowerOutput', 'output, objectPath', UPOWER_STUBS, output, objectPath);
+
+// Real upower -i shapes from this machine's devices, trimmed to what the
+// parser consumes.
+const UPOWER_BT_HIDPP = ['  native-path:          hidpp_battery_2', '  model:                MX Master 3',
+    '  serial:               cb:6a:b2:6c:73:47', '  mouse',
+    '    percentage:          50%', '    state:               charging',
+    "    icon-name:           'battery-full-charging-symbolic'"].join('\n');
+const UPOWER_DONGLE_HIDPP = ['  native-path:          hidpp_battery_0', '  model:                Wireless Mouse M305',
+    '  serial:               f9-0d-4f-0c', '  mouse',
+    '    percentage:          89%', '    state:               discharging'].join('\n');
+const UPOWER_BLUEZ = ['  native-path:          bluez:0C_1A_0F_2E_91_62',
+    '  serial:               0C-1A-0F-2E-91-62', '  headphones',
+    '    percentage:          70%', '    state:               discharging'].join('\n');
 
 // The command line each DataSource is started with; the handlers read the
 // device id out of it and ignore a src that does not carry one.
@@ -305,4 +361,49 @@ test('unpairing refreshes without reading a reply', () => {
     const r = fireOk(handler, { reply: '', src: '/usr/bin/gdbus call --session -d org.kde.kdeconnect' });
     assert.equal(r.scheduled, 1);
     assert.deepEqual(r.warnings, []);
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// UPower output parsing (pure function; covers the hidpp transport fix)
+// ══════════════════════════════════════════════════════════════════════════
+
+test('upower parses device fields, type and charging', () => {
+    const d = parseUpower(UPOWER_BT_HIDPP, '/org/freedesktop/UPower/devices/battery_hidpp_battery_2');
+    assert.equal(d.name, 'MX Master 3');
+    assert.equal(d.serial, 'cb:6a:b2:6c:73:47');
+    assert.equal(d.percentage, 50);
+    assert.equal(d.charging, true);            // from state: and icon-name:
+    assert.equal(d.type, 'mouse');
+    assert.equal(d.objectPath, '/org/freedesktop/UPower/devices/battery_hidpp_battery_2');
+    assert.equal(d.icon, 'icon(mouse)');
+});
+
+test('a hidpp battery reporting a colon-MAC serial is Bluetooth', () => {
+    // Kernel hidpp batteries carry the transport in the serial; the BT link
+    // exposes the peer MAC. This case must keep its disconnect action.
+    const d = parseUpower(UPOWER_BT_HIDPP);
+    assert.equal(d.connectionType, 2);
+    assert.equal(d.bluetoothAddress, 'CB:6A:B2:6C:73:47');
+    assert.equal(typeof d.disconnect, 'function');
+});
+
+test('a hidpp battery over a receiver or cable stays wireless (regression)', () => {
+    // The real M305 behind a Unifying receiver reports a dash-separated uniq.
+    // Regression 1: when the MAC match fails, classification must still land
+    // on wireless (1) - not the wired default (0), which the provider silently
+    // drops, hiding the device entirely.
+    const d = parseUpower(UPOWER_DONGLE_HIDPP);
+    assert.equal(d.connectionType, 1, 'dongle hidpp battery was not classified wireless');
+    // Regression 2 (same fixture): without a MAC there is no disconnect
+    // action and no bluetooth address
+    assert.equal(d.bluetoothAddress, '');
+    assert.equal(d.disconnect, undefined);
+    assert.equal(d.percentage, 89);
+});
+
+test('bluez devices classify Bluetooth via the native-path as before', () => {
+    const d = parseUpower(UPOWER_BLUEZ);
+    assert.equal(d.connectionType, 2);
+    assert.equal(d.bluetoothAddress, '0C:1A:0F:2E:91:62');
+    assert.equal(d.type, 'headphones');
 });

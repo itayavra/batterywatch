@@ -38,8 +38,15 @@ PlasmoidItem {
         id: hidDevicesProvider
     }
 
-    // List of providers (in priority order)
-    property var providers: [upowerProvider, companionProvider, openLinkHubProvider, openRazerProvider, kdeConnectProvider, hidDevicesProvider]
+    SolaarProvider {
+        id: solaarProvider
+    }
+
+    // List of providers (in priority order). UPower is the system's official
+    // view and wins serial-matches; Solaar fills in what UPower misses
+    // (Logitech devices behind receivers/BT, richer battery data) and in turn
+    // beats the HID provider, which stays the protocol-specific last resort.
+    property var providers: [upowerProvider, companionProvider, openLinkHubProvider, openRazerProvider, kdeConnectProvider, solaarProvider, hidDevicesProvider]
 
     // Debug mode
     property bool debugMode: Plasmoid.configuration.debugMode
