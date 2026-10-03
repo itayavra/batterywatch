@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **Keychron M3 support** — battery level of the M3 over its "Keychron Link" dongle (3434:d031), read through the dongle's bridge interface (the only node whose report descriptor declares usage page 0x8c). This dongle generation does not speak the M5's input/output-report protocol, so the request schema learned a feature-report transport: the launcher's state probe travels as SETFEATURE 0x51, the dongle acknowledges on input report 0x54 (and is asked again when it reports it is busy), and the mouse's state packet is read back with GETFEATURE 0x51 at exactly 21 bytes — any other size the dongle stalls. Protocol layout per the Keychron launcher's JavaScript, reverse-engineered in [keychron-vial](https://github.com/Tymon3310/keychron-vial), and the dongle replies captured in [issue #48](https://github.com/itayavra/batterywatch/issues/48). Not yet verified on real hardware — feedback welcome. Wired mode over cable is not covered: the mouse never enumerates over USB in the captures so far
+
+### Contributors
+- @dCo3lh0 — issue #48 on-device diagnostics: the probe runs that mapped the Link dongle's interfaces and captured the replies this support is built on
+
 ## [0.3.2] - 2026-09-28
 
 ### Added

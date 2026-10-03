@@ -13,6 +13,10 @@ sysfs + hidraw devices and verifies every behavior the widget depends on:
                   transports; their control-interface targeting, battery and
                   charging-state decode, blocked reporting, and udev rules.
   SC2 (stream):   battery decode from stream report, charging state, no write.
+  M3 (Keychron):  2.4 GHz Link dongle - bridge-node discovery by usage page,
+                  the feature-report handshake (exact report size, busy
+                  retry, stalled read), battery and charging decode.
+  Logitech:       HID++ request/validation/voltage decode per headset model.
 
 Written as plain pytest-style test_*() functions so they read like idiomatic
 Python tests. They run under pytest directly (pytest collects test_* in this
@@ -26,6 +30,7 @@ Exit: 0 = all checks passed, 1 = at least one failed.
 
 import builtins
 import contextlib
+import errno
 import importlib.machinery
 import importlib.util
 import io
@@ -71,11 +76,17 @@ unpatched_usb_serial = rhd.usb_serial
 # ══════════════════════════════════════════════════════════════════════════
 scenario = {"uevents": {}, "fake_devs": {}, "reply_fd": None, "reply_buf": bytearray(64),
             "reply_queue": [], "writes": [], "write_data": [], "reads": [], "read_sizes": [],
-            "open_flags": [], "descriptors": {}, "descriptor_reads": 0}
+            "open_flags": [], "descriptors": {}, "descriptor_reads": 0,
+            "ioctls": [], "feature_sets": [], "feature_answer": None}
 
 def m5_uevent(node, pid="0000D028", name="Keychron Keychron Ultra-Link 8K", iface=4):
     return (f"DRIVER=hid-generic\nHID_ID=0003:00003434:{pid}\n"
             f"HID_NAME={name}\nHID_PHYS=usb-0000:00:14.0-11/input{iface}\nHID_UNIQ=\n")
+
+def keychron_link_uevent(node, pid="0000D031", iface=2):
+    return (f"DRIVER=hid-generic\nHID_ID=0003:00003434:{pid}\n"
+            f"HID_NAME=Keychron  Keychron Link \n"
+            f"HID_PHYS=usb-0000:07:00.3-4/input{iface}\nHID_UNIQ=\n")
 
 def azoth_uevent(node, pid="00001ACE", iface=1):
     return (f"DRIVER=hid-generic\nHID_ID=0003:00000B05:{pid}\n"
@@ -112,6 +123,25 @@ def fake_read(fd, size):
             return bytes(scenario["reply_queue"].pop(0))
         return bytes(scenario["reply_buf"])
     return b""
+
+class FakeFcntl:
+    # Stand-in for the fcntl module: the Link dongle's feature reports travel
+    # through HIDIOCSFEATURE (0x06) / HIDIOCGFEATURE (0x07), whose request number
+    # carries the report size in bits 16-29. Rebound as rhd.fcntl, so the real
+    # module stays untouched for the subprocess runs.
+    def ioctl(self, fd, request, buf, *args):
+        number, length = request & 0xFF, (request >> 16) & 0x3FFF
+        scenario["ioctls"].append((fd, number, length))
+        if number == 0x07:
+            answer = scenario["feature_answer"]
+            if answer is None:
+                raise OSError(errno.EPIPE, os.strerror(errno.EPIPE))
+            # like the kernel, the driver fills the report and the helper has to
+            # have put the report ID in place itself
+            buf[1:len(answer)] = answer[1:]
+        else:
+            scenario["feature_sets"].append(bytes(buf))
+        return 0
 
 class FakePoller:
     def __init__(self):
@@ -215,6 +245,34 @@ def install_azoth_scenario(pid="00001ACE", with_blocked=False):
     scenario["descriptors"] = {}
     scenario["descriptor_reads"] = 0
 
+def install_keychron_link_scenario(with_blocked=False):
+    # The Link dongle exposes several HID nodes and only its bridge collection
+    # (usage page 0x8C) talks - and it talks in feature reports, not writes
+    scenario["uevents"] = {
+        "hidraw0": keychron_link_uevent("hidraw0", iface=0),
+        "hidraw1": keychron_link_uevent("hidraw1", iface=1),
+        "hidraw2": keychron_link_uevent("hidraw2", iface=2),
+    }
+    scenario["descriptors"] = {
+        "hidraw0": hid_descriptor(0x0001),
+        "hidraw1": hid_descriptor(0x0001),
+        "hidraw2": hid_descriptor(0x8C),
+    }
+    scenario["fake_devs"] = {f"/dev/hidraw{n}": 300 + n for n in range(3)}
+    scenario["deny"] = with_blocked
+    scenario["writes"] = []
+    scenario["write_data"] = []
+    scenario["reads"] = []
+    scenario["read_sizes"] = []
+    scenario["open_flags"] = []
+    scenario["reply_buf"] = bytearray(0)
+    scenario["reply_queue"] = []
+    scenario["reply_fd"] = 302
+    scenario["descriptor_reads"] = 0
+    scenario["ioctls"] = []
+    scenario["feature_sets"] = []
+    scenario["feature_answer"] = None
+
 def set_m5_reply(byte20=87, report_id=0xB4, cmd=0x06):
     buf = bytearray(64)
     buf[0] = report_id
@@ -242,6 +300,23 @@ def set_azoth_reply(pct=73, state=0x00, prefix=bytes.fromhex("021201")):
     buf[status_offset] = state
     scenario["reply_buf"] = buf
 
+def link_state_packet(header=0x01, connected=0x01, power=0x00, battery=90, length=20):
+    # The mouse state packet, payload only: header naming the protocol, the
+    # connection state at byte 3, then the power/battery pair (8K Nordic mice
+    # carry it further up the packet)
+    payload = bytearray(length)
+    payload[0], payload[3] = header, connected
+    power_at, battery_at = (10, 11) if header == 0x41 else (5, 6)
+    payload[power_at], payload[battery_at] = power, battery
+    return bytes(payload)
+
+def link_feature_answer(**kwargs):
+    return bytes([0x51]) + link_state_packet(**kwargs)
+
+def link_ack(ready=True, marker=0xE4):
+    # Input report 0x54: ACK marker, then ready (answer can be read) or busy
+    return bytes([0x54, marker, 0x01 if ready else 0x00]) + b"\x00" * 17
+
 def patch_module():
     rhd.open = fake_open
     # Scenario fixtures provide only hidraw uevent files.  Do not let their
@@ -253,6 +328,7 @@ def patch_module():
     rhd.os.read = fake_read
     rhd.os.close = lambda fd: None
     rhd.select.poll = FakePoller
+    rhd.fcntl = FakeFcntl()
 
 def run_main_capture():
     out = io.StringIO()
@@ -567,6 +643,137 @@ def test_azoth_blocked_entry_and_udev_rule_cover_both_variants():
 
 
 # ══════════════════════════════════════════════════════════════════════════
+# Keychron M3 (2.4 GHz Link dongle): feature-report handshake
+# ══════════════════════════════════════════════════════════════════════════
+@contextlib.contextmanager
+def fast_link_retry():
+    # The dongle's "busy" back-off is half a second of real time; no test needs
+    # to wait it out
+    saved = rhd.LINK_RETRY_SEC
+    rhd.LINK_RETRY_SEC = 0
+    try:
+        yield
+    finally:
+        rhd.LINK_RETRY_SEC = saved
+
+def test_link_reference_profile():
+    dev = next(dev for dev in rhd.KNOWN_DEVICES if dev.name == "Keychron M3")
+    assert dev.device_type == rhd.DeviceType.MOUSE
+    assert dev.variants == (rhd.DeviceVariant(0xD031, None, usage_page=0x8C),)
+    # a plain RequestSchema that happens to travel as a feature report
+    assert dev.source.request == bytes.fromhex("01008101") + b"\x00" * 16, "state probe, zero-padded"
+    assert dev.source.feature_report == 0x51
+    assert dev.source.handshake is rhd._keychron_link_handshake
+
+def test_link_discovery_targets_the_bridge_collection():
+    install_keychron_link_scenario()
+    devs = rhd.find_devices()
+    assert [d.devpath for d in devs] == ["/dev/hidraw2"], f"found: {[d.devpath for d in devs]!r}"
+    assert devs[0].pid == 0xD031
+    assert devs[0].serial == "usb-0000:07:00.3-4"
+
+def test_link_discovery_needs_the_bridge_usage_page():
+    install_keychron_link_scenario()
+    scenario["descriptors"]["hidraw2"] = hid_descriptor(0x0001)
+    assert rhd.find_devices() == []
+
+def test_link_command_is_a_feature_report_at_the_reports_own_size():
+    install_keychron_link_scenario()
+    scenario["reply_queue"] = [link_ack()]
+    scenario["feature_answer"] = link_feature_answer(battery=90)
+    assert rhd.read_status(rhd.find_devices()[0]) == {"percentage": 90, "charging": False}
+    assert scenario["feature_sets"] == [bytes.fromhex("51") + bytes.fromhex("01008101") + b"\x00" * 16], \
+        "the state probe, behind the feature report's own ID"
+    assert scenario["ioctls"] == [(302, 0x06, 21), (302, 0x07, 21)], "SET then GET, both 21 bytes"
+    assert scenario["writes"] == [], "feature reports never go through write()"
+
+def test_link_decodes_charging_and_the_8k_nordic_layout():
+    install_keychron_link_scenario()
+    scenario["reply_queue"] = [link_ack()]
+    scenario["feature_answer"] = link_feature_answer(header=0x41, power=0x01, battery=57)
+    assert rhd.read_status(rhd.find_devices()[0]) == {"percentage": 57, "charging": True}
+
+def test_link_nordic_discharging_state_decodes_as_not_charging():
+    install_keychron_link_scenario()
+    scenario["reply_queue"] = [link_ack()]
+    scenario["feature_answer"] = link_feature_answer(header=0x41, power=0x03, battery=57)
+    assert rhd.read_status(rhd.find_devices()[0]) == {"percentage": 57, "charging": False}
+
+def test_link_reads_a_state_packet_mirrored_into_the_acknowledgement():
+    # the acknowledgement report is the same size as the state packet, so the
+    # dongle may answer in either - accept both
+    install_keychron_link_scenario()
+    scenario["reply_queue"] = [bytes([0x54]) + link_state_packet(battery=64)]
+    assert rhd.read_status(rhd.find_devices()[0]) == {"percentage": 64, "charging": False}
+    assert scenario["ioctls"] == [(302, 0x06, 21)], "the answer needs no feature read"
+
+def test_feature_report_command_is_answered_without_a_handshake():
+    # the handshake is only for devices that acknowledge the command first;
+    # any other feature-report device is simply read back
+    install_keychron_link_scenario()
+    scenario["feature_answer"] = link_feature_answer(battery=77)
+    dev = rhd.find_devices()[0]
+    dev = dev._replace(source=dev.source._replace(handshake=None))
+    assert rhd.read_status(dev) == {"percentage": 77, "charging": False}
+    assert scenario["ioctls"] == [(302, 0x06, 21), (302, 0x07, 21)], "SET then GET"
+
+def test_link_sends_the_command_again_when_the_dongle_is_busy():
+    install_keychron_link_scenario()
+    scenario["reply_queue"] = [link_ack(ready=False), link_ack()]
+    scenario["feature_answer"] = link_feature_answer(battery=30)
+    with fast_link_retry():
+        assert rhd.read_status(rhd.find_devices()[0]) == {"percentage": 30, "charging": False}
+    assert scenario["ioctls"] == [(302, 0x06, 21), (302, 0x06, 21), (302, 0x07, 21)]
+
+def test_link_ignores_other_reports_on_the_bridge_node():
+    # neither the 8K motion flood, nor an unknown header, nor a frame too short
+    # to hold the battery counts as the answer we asked for
+    install_keychron_link_scenario()
+    scenario["reply_queue"] = [bytes.fromhex("b1 00 10 00 01 02 03 04"),
+                               bytes.fromhex("54 02 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
+                               bytes.fromhex("54 01 00 00")]
+    assert rhd.read_status(rhd.find_devices()[0]) is None
+
+def test_link_silence_reports_nothing():
+    install_keychron_link_scenario()
+    assert rhd.read_status(rhd.find_devices()[0]) is None
+
+def test_link_stalled_or_unrelated_feature_read_reports_nothing():
+    # A feature read at the wrong size stalls (EPIPE) - what the issue #48 probe
+    # hit with every length but the report's own
+    install_keychron_link_scenario()
+    scenario["reply_queue"] = [link_ack()]
+    assert rhd.read_status(rhd.find_devices()[0]) is None
+    # and a feature report that is not a state packet is never decoded as one
+    install_keychron_link_scenario()
+    scenario["reply_queue"] = [link_ack()]
+    scenario["feature_answer"] = link_feature_answer(connected=0x02)
+    assert rhd.read_status(rhd.find_devices()[0]) is None
+
+def test_link_blocked_entry_needs_the_shared_keychron_rule():
+    install_keychron_link_scenario(with_blocked=True)
+    dev = rhd.find_devices()[0]
+    assert rhd.is_blocked(dev) is True
+    entry = rhd._device_entry(dev)
+    assert entry["blocked"] is True
+    assert entry["pid"] == "d031"
+    assert entry["unblock_command"] == rhd.udev_unblock_command(0x3434)
+
+def test_link_debug_output_shows_the_handshake():
+    install_keychron_link_scenario()
+    scenario["reply_queue"] = [link_ack(ready=False), link_ack()]
+    scenario["feature_answer"] = link_feature_answer(battery=12)
+    with fast_link_retry(), debug_stderr() as stderr:
+        assert rhd.read_status(rhd.find_devices()[0]) == {"percentage": 12, "charging": False}
+    log = stderr.getvalue()
+    assert "SETFEATURE 0x51 01 00 81 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00" in log, log
+    assert "received 54 e4 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00" in log, log
+    assert "dongle was busy, sending the request again" in log, "the retry is logged"
+    assert "feature report holds 51 01 00 00 01 00 00 0c 00 00 00 00 00 00 00 00 00 00 00 00" in log, log
+    assert "reading {'percentage': 12, 'charging': False}" in log, log
+
+
+# ══════════════════════════════════════════════════════════════════════════
 # M5: blocked (needs udev rule) reporting
 # ══════════════════════════════════════════════════════════════════════════
 def test_is_blocked_true_on_eacces():
@@ -603,14 +810,16 @@ def test_is_blocked_uses_effective_variant_schema_open_mode():
 def test_udev_rule_path_is_vid_wide():
     assert rhd.udev_rule_path(0x3434) == "/etc/udev/rules.d/70-batterywatch-hid-3434.rules"
 
-def test_m5_rule_covers_both_variants():
+def test_keychron_rule_covers_every_variant():
     rule = rhd.udev_rule_for(0x3434)
-    assert rule.count('ATTRS{idProduct}') == 2, "one line per variant"
+    assert rule.count('ATTRS{idProduct}') == 3, "one line per variant"
     assert 'ATTRS{idProduct}=="d028"' in rule
     assert 'ATTRS{idProduct}=="d048"' in rule
+    assert 'ATTRS{idProduct}=="d031"' in rule
 
-def test_m5_rule_uses_write_mode():
-    assert rhd.udev_rule_for(0x3434).count('MODE="0660"') == 2
+def test_keychron_rule_uses_write_mode():
+    # the M5 and the M3 dongle both send commands, so they share one write rule
+    assert rhd.udev_rule_for(0x3434).count('MODE="0660"') == 3
 
 def test_sc2_rule_uses_read_only_mode():
     assert rhd.udev_rule_for(0x28de).count('MODE="0440"') == 2

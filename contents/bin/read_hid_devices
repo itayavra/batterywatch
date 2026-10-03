@@ -18,6 +18,7 @@ Organized in sections mirroring the concerns:
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import re
@@ -82,6 +83,10 @@ class InputStreamSchema(NamedTuple):
     charge_range: tuple[int, int] | None          # Battery charge min, max; None = battery is already reported in %
     status:       DataPos | ChargingStates | None # Charging: direct byte (DataPos), derived from state ID (ChargingStates), or unsupported (None)
 
+    # A stream device has nothing to send; RequestSchema names the feature
+    # report its command and answer travel in, None to send it as a plain report
+    feature_report = None
+
     def rejection_reason(self, buf) -> str | None:
         # Nothing to match against: a stream has no request to answer
         return None
@@ -95,10 +100,26 @@ class RequestSchema(NamedTuple):
     charge_range: tuple[int, int] | None
     status:       DataPos | ChargingStates | None
     request:      bytes                           # Packet to send before reading; device replies with battery report
+    # Some devices take their command as a HID feature report: hidraw sends
+    # those through an ioctl instead of the input stream, and the answer is read
+    # back the same way, in a report of the same ID and size
+    feature_report: int | None = None             # Feature report ID, None to write() the request
+    handshake:    Callable[[int, FoundDevice], bytes | None] | None = None
+                                                    # Dialogue to run before the answer is readable, if the device runs one
     timeout:      float = REQUEST_TIMEOUT_SEC     # Max wait for the reply; devices answer in milliseconds
     reply_prefix: bytes | None = None             # Expected reply prefix; None keeps the common report-ID + command echo check
     # Protocol-specific check: None if the packet answers our request, else why not
     validate_reply: Callable[[bytes], str | None] | None = None
+
+    def send(self, fd):
+        if self.feature_report is None:
+            os.write(fd, self.request)
+        else:
+            _feature_set(fd, self.feature_report, self.request)
+
+    def feature_length(self):
+        # The ioctl counts the report ID too, and the device insists on its size
+        return len(self.request) + 1
 
     def rejection_reason(self, buf) -> str | None:
         # both this check and the protocol-specific one index into the packet
@@ -311,6 +332,83 @@ def _logitech_headset(name, cmd, curve, *pids, usage_page=0xFF43, iface=None):
     )
 
 
+# ── Keychron Link dongle (2.4 GHz bridge) ─────────────────────────────────
+# The mouse never enumerates itself: everything goes through its "Keychron Link"
+# dongle, whose bridge collection (usage page 0x8C) is the only node of the d031
+# dongle that answers - the mouse's own M5-style B3/B4 reports are accepted on
+# every interface but never reply to anything (issue #48). Command and answer
+# travel as a feature report, and the dongle acknowledges the command on its own
+# input report first - the "ACK feature report" flow the Keychron Launcher uses
+# (Tymon3310/keychron-vial docs/launcher/wireless-communication.md, "Transceiver
+# Architecture"). The report's size is not negotiable: the d031 dongle stalls
+# (EPIPE) on any feature read that doesn't match it exactly.
+LINK_STATE_REPORT = 0x51      # Feature report the command and the state packet live in
+LINK_ACK_REPORT = 0x54        # Input report the dongle acknowledges the command on
+LINK_ACK_MARKERS = (0xE4, 0x52)
+LINK_READY = 0x01             # ACK byte 1 = the answer can be read now
+LINK_RETRY_SEC = 0.5          # ACK byte 1 = 0: it was busy, so ask again after this
+
+# The state packet is a header byte naming the protocol, the connection state at
+# byte 3, then the power/battery pair at a protocol-specific offset (same doc,
+# "Battery Level"). All offsets count payload bytes, i.e. the packet without its
+# report ID - what WebHID hands the Launcher.
+LINK_STATE_LEN = 12                              # Long enough for every offset below
+LINK_CONNECTED = 0x01
+LINK_STATE_LAYOUTS = {0x01: (5, 6),             # 1K and 4K mice
+                       0x41: (10, 11)}           # 8K Nordic mice (0x01 | wireless bit)
+LINK_DISCHARGING = (0, 3)                        # What the Launcher maps to "not charging"
+
+
+def _keychron_link_layout(payload):
+    """(power, battery) offsets of a mouse state packet, None for anything else."""
+    if len(payload) < LINK_STATE_LEN or payload[3] != LINK_CONNECTED:
+        return None
+    return LINK_STATE_LAYOUTS.get(payload[0])
+
+
+def _keychron_link_parse(buffers):
+    payload = buffers[LINK_STATE_REPORT][1:]
+    layout = _keychron_link_layout(payload)
+    if layout is None:
+        return KEEP_READING
+    power, battery = layout
+    return {"percentage": min(payload[battery], 100),
+            "charging": payload[power] not in LINK_DISCHARGING}
+
+
+def _keychron_link_handshake(fd, dev):
+    """Waits out the dongle's acknowledgement of the command that open_device()
+    already sent, and returns the state packet's payload, or None: ACK byte 1 is
+    0x01 once the answer can be read and 0x00 when the dongle was busy and the
+    command has to go out again."""
+    schema = dev.source
+    deadline = time.monotonic() + schema.poll_timeout()
+    while True:
+        buf = _feature_wait(fd, deadline, dev.desc.name)
+        if buf is None:
+            return None
+        # anything but the acknowledgement report is the mouse's own traffic
+        # relayed by the dongle
+        if buf[0] != LINK_ACK_REPORT or len(buf) < 3:
+            continue
+        # The acknowledgement report is as long as the state packet, so a dongle
+        # may answer in either - accept both
+        if _keychron_link_layout(buf[1:]) is not None:
+            return buf[1:]
+        if buf[1] not in LINK_ACK_MARKERS:
+            continue
+        if buf[2] == LINK_READY:
+            answer = _feature_get(fd, schema.feature_report, schema.feature_length())
+            debug(f"{dev.desc.name}: feature report holds {hexbuf(answer)}")
+            return answer[1:]
+        # It was busy, so ask again
+        if time.monotonic() + LINK_RETRY_SEC >= deadline:
+            return None
+        debug(f"{dev.desc.name}: dongle was busy, sending the request again")
+        time.sleep(LINK_RETRY_SEC)
+        schema.send(fd)
+
+
 def _azoth_serial_resolver(path, vid, pid, fields):
     """Use Azoth's clean USB serial before its malformed HID serial."""
     return (usb_serial(path, vid, pid)
@@ -343,6 +441,29 @@ KNOWN_DEVICES = [
             if buffers[0xB4][20] > 100
             else {"percentage": buffers[0xB4][20], "charging": False}
         ),
+    ),
+    Device(
+        name="Keychron M3",
+        device_type=DeviceType.MOUSE,
+        vid=0x3434,
+        variants=(
+            DeviceVariant(0xd031, None, usage_page=0x8C),  # the dongle's bridge collection
+        ),
+        # The documented state probe - report type 1, read flag 0x81, state 1 -
+        # padded to the feature report's 20 data bytes, and acknowledged before
+        # the dongle answers it
+        source = RequestSchema(
+            charge   = DataPos(LINK_STATE_REPORT, 6),  # 8K packets carry the pair further up
+            charge_range = None,
+            status   = None,
+            request  = bytes.fromhex('01008101') + b'\x00' * 16,
+            feature_report = LINK_STATE_REPORT,
+            handshake = _keychron_link_handshake,
+            # the ACK may come slowly over the air, and a busy dongle costs the
+            # documented 0.5s back-off before the command goes out again
+            timeout  = 2.0,
+        ),
+        parse = _keychron_link_parse,
     ),
     Device(
         name="Steam Controller 2",
@@ -687,8 +808,7 @@ def find_devices():
 # access level the schema needs (missing udev rule). Asleep devices *can* be
 # opened, so this only fires for a genuine permissions problem.
 def is_blocked(dev):
-    needs_write = isinstance(dev.source, RequestSchema)
-    flags = os.O_RDWR if needs_write else os.O_RDONLY
+    flags = os.O_RDWR if isinstance(dev.source, RequestSchema) else os.O_RDONLY
     try:
         fd = os.open(dev.devpath, flags | os.O_NONBLOCK)
         os.close(fd)
@@ -710,21 +830,82 @@ def open_device(dev, schema):
         return None
 
     if needs_write:
+        how = (f"SETFEATURE 0x{schema.feature_report:02x}"
+               if schema.feature_report is not None else "write")
         try:
-            debug(f"{dev.desc.name}: write {hexbuf(schema.request)} ({len(schema.request)} bytes)")
-            os.write(fd, schema.request)
+            debug(f"{dev.desc.name}: {how} {hexbuf(schema.request)} ({len(schema.request)} bytes)")
+            schema.send(fd)
         except OSError as e:
-            debug(f"{dev.desc.name}: write of {hexbuf(schema.request)} failed: {e}")
+            debug(f"{dev.desc.name}: {how} of {hexbuf(schema.request)} failed: {e}")
             os.close(fd)
             return None
 
     return fd
+
+
+# ── Feature-report transport ──────────────────────────────────────────────
+# hidraw hands feature reports to the device through ioctl rather than the input
+# stream: the buffer starts with the report ID and the request number carries the
+# report's size (0x48 = 'H' for hidraw).
+_HIDIOCSFEATURE = 0x06
+_HIDIOCGFEATURE = 0x07
+
+def _feature_ioctl(number, length):
+    return (3 << 30) | (length << 16) | (0x48 << 8) | number
+
+def _feature_set(fd, report_id, payload):
+    fcntl.ioctl(fd, _feature_ioctl(_HIDIOCSFEATURE, len(payload) + 1),
+                bytearray([report_id]) + payload)
+
+def _feature_get(fd, report_id, length):
+    answer = bytearray(length)
+    answer[0] = report_id
+    fcntl.ioctl(fd, _feature_ioctl(_HIDIOCGFEATURE, length), answer)
+    return bytes(answer)
+
+# The device's next input report before the deadline, or None when it stays
+# silent, errors out or disconnects - whatever it is, the caller judges it.
+# O_NONBLOCK + poll() sleeps in kernel with no CPU utilisation, like the report
+# loop below.
+def _feature_wait(fd, deadline, name):
+    poller = select.poll()
+    poller.register(fd, select.POLLIN)
+    while True:
+        timeout_ms = int((deadline - time.monotonic()) * 1000)
+        if timeout_ms <= 0:
+            return None
+
+        events = poller.poll(timeout_ms)
+        if not events:
+            return None
+
+        _, revents = events[0]
+        # POLLERR/POLLHUP/POLLNVAL = device error / disconnected / invalid FD
+        if revents & (select.POLLERR | select.POLLHUP | select.POLLNVAL):
+            debug(f"{name}: device error or disconnect (poll flags {revents:#x})")
+            return None
+
+        try:
+            buf = os.read(fd, HID_BUFFER_SIZE)
+        except BlockingIOError:
+            continue
+        except OSError as e:
+            debug(f"{name}: read failed: {e}")
+            return None
+        if not buf:
+            continue
+
+        debug(f"{name}: received {hexbuf(buf)} ({len(buf)} bytes)")
+        return buf
 
 # Reads a device's power status: waits for a report the schema accepts or for
 # the schema's timeout. O_NONBLOCK + poll() makes it sleep in kernel with 0 CPU
 # utilisation. Returns status dict {"percentage", "charging"} or None.
 def read_status_hw(dev):
     schema = dev.source
+    if schema.feature_report is not None:
+        return read_status_feature(dev)
+
     needed = needed_reports(schema)
     # Most devices use 64-byte reports.  Some request-response devices, such
     # as the ROG Azoth, use a 65-byte report including report ID, so read at
@@ -805,6 +986,40 @@ def read_status_hw(dev):
                 return status
     finally:
         os.close(fd)
+
+# Same contract as read_status_hw above, for a device that answers in a feature
+# report. A refused feature read stalls (EPIPE) instead of answering, which is
+# as good as no answer at all.
+def read_status_feature(dev):
+    schema = dev.source
+    fd = open_device(dev, schema)
+    if fd is None:
+        return None
+
+    try:
+        # The command went out when the node was opened; devices that acknowledge
+        # it first run their own handshake, the others are answered right away
+        if schema.handshake is None:
+            answer = _feature_get(fd, schema.feature_report, schema.feature_length())[1:]
+        else:
+            answer = schema.handshake(fd, dev)
+    except OSError as e:
+        debug(f"{dev.desc.name}: feature report exchange failed: {e}")
+        answer = None
+    finally:
+        os.close(fd)
+
+    if answer is None:
+        debug(f"{dev.desc.name}: no state packet on {dev.devpath} within "
+              f"{schema.poll_timeout():g}s")
+        return None
+    report = bytes([schema.feature_report]) + answer
+    status = dev.desc.parse({schema.feature_report: report})
+    if status is KEEP_READING:
+        debug(f"{dev.desc.name}: {hexbuf(report)} is not the battery frame")
+        return None
+    debug(f"{dev.desc.name}: reading {status}")
+    return status
 
 # Stateless: reports a current reading or nothing; no state between runs.
 def read_status(dev):
