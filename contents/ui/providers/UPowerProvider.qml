@@ -21,6 +21,8 @@ Item {
         // Wireless mice, reported as keyboards when connected via USB cable
         "pro x wireless": "mouse",
         "logitech g903 wired/wireless gaming mouse": "mouse",
+        // PowerPlay / Lightspeed: HID++ advertises G-keys as a keyboard collection
+        "g502 lightspeed wireless gaming mouse": "mouse",
     })
     
     function refresh() {
