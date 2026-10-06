@@ -104,6 +104,12 @@
   </group>
 
   <!-- Integrations -->
+  <group name="UPower">
+    <entry name="enableUPowerIntegration" type="Bool">
+      <default>true</default>
+    </entry>
+  </group>
+
   <group name="OpenLinkHub">
     <entry name="enableOpenLinkHubIntegration" type="Bool">
       <default>true</default>
@@ -146,6 +152,15 @@
     </entry>
     <entry name="hidPollingTime" type="Int">
       <default>5</default>
+    </entry>
+  </group>
+
+  <group name="Solaar">
+    <entry name="enableSolaarIntegration" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="solaarPollingTime" type="Int">
+      <default>10</default>
     </entry>
   </group>
 </kcfg>

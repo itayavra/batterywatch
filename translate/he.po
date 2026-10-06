@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-05-25 12:19+0200\n"
+"POT-Creation-Date: 2026-08-18 00:23+0200\n"
 "PO-Revision-Date: 2026-01-03 21:15+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -214,6 +214,10 @@ msgstr "BatteryWatch גרסה %1"
 msgid "No connected devices"
 msgstr "אין מכשירים מחוברים"
 
+#: ../contents/ui/main.qml
+msgid "%1 - permission needed"
+msgstr ""
+
 #. i18n: %1 can be the device name or, in the case of multiple batteries, the battery label,
 #. or simply the word, ‘Battery’. %2 is the charge percentage value.
 #: ../contents/ui/main.qml
@@ -258,6 +262,10 @@ msgid "Unknown Device"
 msgstr "מכשיר לא ידוע"
 
 #: ../contents/ui/main.qml
+msgid "Permission needed - run the command in a terminal"
+msgstr ""
+
+#: ../contents/ui/main.qml
 msgid "Battery"
 msgstr "סוללה"
 
@@ -290,6 +298,22 @@ msgstr "הסתר מהמגש"
 #: ../contents/ui/main.qml
 msgid "Show in tray"
 msgstr "הצג במגש"
+
+#: ../contents/ui/main.qml
+msgid "Copied!"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "Copy command"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "Copied to clipboard"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "Copy the command to run in a terminal"
+msgstr ""
 
 #. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
 #: ../contents/ui/main.qml

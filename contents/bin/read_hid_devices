@@ -1,14 +1,29 @@
 #!/usr/bin/env python3
-"""
-read_hid_devices - HID battery reader
+"""read_hid_devices - HID battery reader for the BatteryWatch plasmoid.
 
-Author: TheDogORB <thedogorb@proton.me>
+Scans /sys/class/hidraw for known devices (Keychron M5, Steam Controller 2...),
+reads their battery over hidraw and prints JSON for HIDDevicesProvider.qml:
+
+  {"name", "serial", "percentage", "charging", "deviceType"} for a readable
+  device, or {"name", "serial", "blocked": true, "vid", "pid",
+  "unblock_command", "deviceType"} for one that needs a udev rule.
+
+Organized in sections mirroring the concerns:
+  schema  - report schemas + generic decoder (pure)
+  devices - the registry of known devices (pure data)
+  udev    - udev rule files/commands for blocked devices
+  hid     - sysfs discovery + hidraw I/O
+  cli     - JSON output consumed by the widget
 """
 
+from __future__ import annotations
+
+import json
 import os
+import re
 import select
+import sys
 import time
-
 from enum import Enum
 from typing import NamedTuple, Callable
 
@@ -16,6 +31,28 @@ TIMEOUT_SEC = 10
 MAX_DEVICES = 8
 HID_BUFFER_SIZE = 64
 
+# Diagnostic logging. With --debug, helper emits stderr lines (never interfering
+# with the JSON on stdout) so a found-but-silent device is visible instead of
+# silently vanishing - the widget has no third state between "blocked" and
+# "readable" for a device that won't answer.
+_DEBUG = "--debug" in sys.argv
+
+def debug(message):
+    if _DEBUG:
+        print(f"[batterywatch] {message}", file=sys.stderr)
+
+def hexbuf(buf):
+    """Space-separated lowercase hex, the packet notation used in --debug output."""
+    return " ".join(f"{b:02x}" for b in buf)
+
+# Request-response devices (e.g. Keychron M5) reply within milliseconds; don't
+# stall the widget for the full stream timeout, especially when the mouse sleeps.
+REQUEST_TIMEOUT_SEC = 1
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# schema - report schemas + generic decoder (pure, no hardware I/O)
+# ══════════════════════════════════════════════════════════════════════════
 # Device types, based on DeviceUtils.js
 class DeviceType(Enum):
     GAMEPAD     = "gamepad"
@@ -24,167 +61,85 @@ class DeviceType(Enum):
     HEADPHONES  = "audio-headphones"
     HEADSET     = "audio-headset"
 
-# A helper class; the same device may show under different pids/ifaces hence this exists to mitigate multiple nearly identical device entries
-class DeviceVariant(NamedTuple):
-    pid:    int         # Product ID
-    iface:  int | None  # Interface
+# usage_page sentinel: any vendor-defined page (0xff00-0xffff). Used when the
+# battery collection's exact page varies across a family, so only the range is
+# stable enough to match on.
+VENDOR_USAGE_PAGE = "vendor"
 
-# A helper class; holds where a specific data byte is stored: report/msg ID + data byte offset
+class DeviceVariant(NamedTuple):
+    pid:         int              # Product ID
+    iface:       int | None       # Interface
+    usage_page:  int | str | None = None  # Report-descriptor usage page of the battery node, or VENDOR_USAGE_PAGE
+    source:      InputStreamSchema | RequestSchema | None = None  # Optional schema overriding the device default
+
 class DataPos(NamedTuple):
     report_id:  int     # Report/msg ID e.g. 0x43
     data_byte:  int     # Where a specific byte is located (offset); byte 0 is always report ID
 
-# Points to a location from where a connection state is read out
-# states holds a dict of possible states in which device can be, if not present defaults to charging = false
-# Use case: devices that does not have a charging true/false byte, in other words whether the device is being charged has to be derived from its connection state 
+# Charging derived from a connection-state ID byte; missing ID = not charging
 class ChargingStates(NamedTuple):
     pos:    DataPos         # Location of state ID byte
     states: dict[int, bool] # ID -> charging True/False; missing ID defaults to False
 
-# Power read source
-# InputStream is being sent via a msg every few seconds (~3.5 for SC2)
-# This power scheme supports only devices which periodically send its battery state -> Steam Controller, DualShock etc.
+# Passive: device periodically sends its battery report (e.g. SC2)
 class InputStreamSchema(NamedTuple):
-    charge:             DataPos                         # Where to look for battery charge
-    charge_range:       tuple[int, int] | None          # Battery charge min, max; None = battery is already reported in %
-    status:             DataPos | ChargingStates | None # Charging: direct byte (DataPos), derived from state ID (ChargingStates), or unsupported (None)
+    charge:       DataPos                         # Where to look for battery charge
+    charge_range: tuple[int, int] | None          # Battery charge min, max; None = battery is already reported in %
+    status:       DataPos | ChargingStates | None # Charging: direct byte (DataPos), derived from state ID (ChargingStates), or unsupported (None)
 
-# Main class
-# Represents a device, and holds all the important data used for reading it out
-class Device(NamedTuple):
-    name:           str                         # Device name e.g. "Steam Controller"
-    device_type:    DeviceType                  # "gamepad", "mouse" etc. see DeviceUtils.js for all supported types
-    vid:            int                         # Vendor ID
-    variants:       tuple[DeviceVariant, ...]   # VID, PID, iface used by device - used as path for where to look up device data
-    source:         InputStreamSchema           # How power is read, currently only InputStreamSchema exits
-    parse:          Callable | None             # Custom parser: parse(buffers) -> {"percentage", "charging"} | None; None = generic interpret()
-
-# List of known/supported devices
-# iface = None means that any interface contains battery data
-KNOWN_DEVICES = [
-    Device(
-        name="Steam Controller 2",
-        device_type=DeviceType.GAMEPAD,
-        vid=0x28DE,
-        variants=(
-            DeviceVariant(0x1302, 0),   #  28DE:1302 = USB direct
-                                        #  28DE:1303 = Bluetooth >>> HANDLED BY UPOWER MODULE <<<
-            DeviceVariant(0x1304, 2)    #  28DE:1304 = Wireless via puck dongle
-        ),
-        #  byte[0] = 0x43 (report ID), byte[1] = connection state, byte[2] = battery percentage
-        source = InputStreamSchema(
-            charge = DataPos(0x43, 2),
-            charge_range = None,
-            status = ChargingStates(
-                pos = DataPos(0x43, 1),
-                states = {
-                    0x01: False,    # Wireless
-                    0x02: True,     # Puck
-                    0x03: True,     # Transition in between charging->not charging and vice versa
-                    0x04: True,     # USB
-                }
-            )
-        ),
-        parse=None,
-    )
-]
-
-# Ptr to a location/device that has been found
-class FoundDevice(NamedTuple):
-    devpath: str
-    serial:  str
-    desc:    Device
-
-# Reads sysfs uevent file -> (vid, pid, iface, serial, phys) or None on failure
-def parse_uevent(path):
-    vid = 0
-    pid = 0
-    iface = -1
-    serial = "unknown-hid"
-    phys = ""
-
-    try:
-        with open(path, "r") as file:
-            for line in file:
-                line = line.rstrip("\r\n")
-                # Read out VID+PID
-                if line.startswith("HID_ID="):
-                    parts = line[7:].split(":")
-                    if len(parts) == 3:
-                        try:
-                            vid = int(parts[1], 16)
-                            pid = int(parts[2], 16)
-                        except ValueError:
-                            pass
-                # Read out physical device path + interface
-                elif line.startswith("HID_PHYS="):
-                    idx = line.find("/input")
-                    if idx >= 0:
-                        phys = line[9:idx]      # shared across a device's interfaces
-                        digits = ""
-                        for ch in line[idx + 6:]:
-                            if not ch.isdigit():
-                                break
-                            digits += ch
-                        iface = int(digits) if digits else -1
-                    else:
-                        phys = line[9:]
-                # Read out serial
-                elif line.startswith("HID_UNIQ="):
-                    val = line[9:]
-                    if val:
-                        serial = val
-    except OSError:
+    def rejection_reason(self, buf) -> str | None:
+        # Nothing to match against: a stream has no request to answer
         return None
-    return vid, pid, iface, serial, phys
 
-# Returns the matching Device for a given vid/pid/iface, or None
-def match_device(vid, pid, iface):
-    for dev in KNOWN_DEVICES:
-        if vid != dev.vid:
-            continue
-        for variant in dev.variants:
-            if pid != variant.pid:
-                continue
-            # iface = None in a variant means any interface contains batt data
-            if variant.iface is not None and iface != variant.iface:
-                continue
-            return dev
-    return None
+    def poll_timeout(self) -> float:
+        return TIMEOUT_SEC
 
-# Goes through /sys/class/hidraw* and collects all known interfaces
-def find_devices():
-    devices = []
-    seen = set()
-    try:
-        entries = os.listdir("/sys/class/hidraw")
-    except OSError:
-        return devices
+# One step in an ordered RequestSchema exchange.  The generic executor knows
+# only the semantic key and report ID; protocol-specific correlation belongs
+# in validate_reply (for example, Razer's echoed property byte).
+class RequestTransaction(NamedTuple):
+    key:            str
+    request:        bytes
+    report_id:      int
+    validate_reply: Callable[[bytes], str | None]
 
-    for name in entries:
-        if len(devices) >= MAX_DEVICES:
-            break
-        if name.startswith("."):
-            continue
+    def rejection_reason(self, buf) -> str | None:
+        if not buf:
+            return "empty packet"
+        if buf[0] != self.report_id:
+            return f"report id {buf[0]:#04x} is not {self.report_id:#04x}"
+        return self.validate_reply(buf)
 
-        parsed = parse_uevent(f"/sys/class/hidraw/{name}/device/uevent")
-        if parsed is None:
-            continue
-        vid, pid, iface, serial, phys = parsed
+# Device responds to a request packet with a battery report (e.g. Keychron M5)
+class RequestSchema(NamedTuple):
+    charge:       DataPos
+    charge_range: tuple[int, int] | None
+    status:       DataPos | ChargingStates | None
+    request:      bytes = b""                     # Single request packet; unused when transactions is set
+    timeout:      float = REQUEST_TIMEOUT_SEC     # Max wait for the reply; devices answer in milliseconds
+    reply_prefix: bytes | None = None             # Expected reply prefix; None keeps the common report-ID + command echo check
+    # Optional ordered exchanges. Empty preserves the legacy one-request path.
+    transactions: tuple[RequestTransaction, ...] = ()
 
-        desc = match_device(vid, pid, iface)
-        if desc is None:
-            continue
+    def rejection_reason(self, buf) -> str | None:
+        if len(buf) < 2:
+            return f"{len(buf)}-byte packet is too short to be a reply"
+        if self.reply_prefix is not None:
+            if len(buf) < len(self.reply_prefix) or buf[:len(self.reply_prefix)] != self.reply_prefix:
+                return f"expected prefix {hexbuf(self.reply_prefix)}, got {hexbuf(buf)}"
+            return None
+        if len(self.request) < 2:
+            return None
+        # A real battery reply echoes the request's command byte, which tells it
+        # apart from unrelated reports on the same interface.
+        if buf[0] != self.charge.report_id:
+            return f"report id {buf[0]:#04x} is not {self.charge.report_id:#04x}"
+        if buf[1] != self.request[1]:
+            return f"device address {buf[1]:#04x} does not echo the requested {self.request[1]:#04x}"
+        return None
 
-        # One entry per physical device: iface=None matches every interface, so
-        # skip ones already taken (phys is shared across a device's interfaces)
-        key = (desc.name, phys or name)
-        if key in seen:
-            continue
-        seen.add(key)
-
-        devices.append(FoundDevice(f"/dev/{name}", serial, desc))
-    return devices
+    def poll_timeout(self) -> float:
+        return self.timeout
 
 # All DataPos referenced by a schema
 def schema_positions(schema):
@@ -223,81 +178,752 @@ def interpret(schema, buffers):
     return {"percentage": percentage, "charging": charging}
 
 
-# Reads a device's power status: waits for the report(s) the schema needs or for the
-# TIMEOUT_SEC deadline. O_NONBLOCK + poll() makes it sleep in kernel with 0 CPU
-# utilisation. Returns status dict {"percentage", "charging"} or None.
-def read_status(dev):
-    schema = dev.desc.source
-    needed = needed_reports(schema)
+# ══════════════════════════════════════════════════════════════════════════
+# devices - the registry of known/supported devices (pure data)
+# ══════════════════════════════════════════════════════════════════════════
+class Device(NamedTuple):
+    name:           str                                  # Device name e.g. "Steam Controller"
+    device_type:    DeviceType                           # "gamepad", "mouse" etc. see DeviceUtils.js for all supported types
+    vid:            int                                  # Vendor ID
+    variants:       tuple[DeviceVariant, ...]            # VID, PID, iface used by device - used as path for where to look up device data
+    source:         InputStreamSchema | RequestSchema    # How power is read
+    parse:          Callable | None                      # Custom parser: parse(buffers) -> {"percentage", "charging"} | None | KEEP_READING (not a battery frame, keep waiting); None = generic interpret()
+    serial_resolver: Callable | None = None              # Optional resolver(path, vid, pid, uevent_fields) -> serial
 
+# iface = None means that any interface contains battery data
+
+
+# parse() result: plausible-looking but not a valid battery frame (e.g. an
+# unrelated report on the same interface) - discard and keep waiting.
+KEEP_READING = object()
+
+
+def _azoth_serial_resolver(path, vid, pid, fields):
+    """Use Azoth's clean USB serial before its malformed HID serial."""
+    return (usb_serial(path, vid, pid)
+            or printable_serial(fields.get("HID_UNIQ", ""))
+            or "unknown-hid")
+
+
+# ── Razer Barracuda X Chroma property protocol ────────────────────────────
+RAZER_REPORT_ID = 0x02
+RAZER_REPORT_LEN = 64
+RAZER_VALUE_BYTE = 13
+
+# Captures verify the checksum asymmetry: host requests XOR bytes 0..61,
+# including the report ID; device replies XOR bytes 1..61, excluding it.
+def _razer_get_request(prop):
+    request = bytearray(RAZER_REPORT_LEN)
+    request[:11] = bytes.fromhex("02 00 60 00 00 00 04 00 00 80") + bytes([prop])
+    checksum = 0
+    for byte in request[:62]:
+        checksum ^= byte
+    request[62] = checksum
+    return bytes(request)
+
+def _razer_reply_check(prop):
+    expected = bytes.fromhex("02 02 60 00 00 00 05 00 80 80") + bytes([prop, 0x01, 0x01])
+
+    def check(buf):
+        if len(buf) != RAZER_REPORT_LEN:
+            return f"expected {RAZER_REPORT_LEN}-byte Razer reply, got {len(buf)} bytes"
+        if buf[:13] != expected:
+            return (f"expected Razer property reply {hexbuf(expected)}, "
+                    f"got {hexbuf(buf[:13])}")
+
+        checksum = 0
+        for byte in buf[1:62]:
+            checksum ^= byte
+        if buf[62] != checksum:
+            return f"Razer reply checksum {buf[62]:#04x} is not expected {checksum:#04x}"
+
+        value = buf[RAZER_VALUE_BYTE]
+        if prop == 0x21 and value > 100:
+            return f"Razer battery value {value} is outside 0..100"
+        if prop == 0x2A and value not in (0, 1):
+            return f"Razer charging value {value} is not 0 or 1"
+        return None
+    return check
+
+def _razer_parse(replies):
+    return {
+        "percentage": replies["battery"][RAZER_VALUE_BYTE],
+        "charging": replies["charging"][RAZER_VALUE_BYTE] == 0x01,
+    }
+
+RAZER_BATTERY_REQUEST = _razer_get_request(0x21)
+RAZER_CHARGING_REQUEST = _razer_get_request(0x2A)
+
+
+KNOWN_DEVICES = [
+    Device(
+        name="Keychron M5",
+        device_type=DeviceType.MOUSE,
+        vid=0x3434,
+        variants=(
+            DeviceVariant(0xd028, 4),   # Ultra-Link 8K receiver (wireless), battery on vendor interface 4
+            DeviceVariant(0xd048, 4),   # M5 wired over USB-C, same vendor interface 4
+        ),
+        # Sending request 0xB3:06 makes the device reply with report 0xB4,
+        # command echo 0x06, battery % at byte 20 (per keychron-battery-dkms
+        # and StarPepe's raw reply). Interface 4 is the only one that answers.
+        source = RequestSchema(
+            charge   = DataPos(0xb4, 20),
+            charge_range = None,
+            status   = None,
+            request  = bytes.fromhex('b306') + b'\x00' * 62,
+            timeout  = REQUEST_TIMEOUT_SEC,
+        ),
+        # byte 20 = level 0-100 discharging, "128 + level" while charging (0x80 flag)
+        parse=lambda buffers: (
+            {"percentage": max(0, min(buffers[0xB4][20] - 128, 100)), "charging": True}
+            if buffers[0xB4][20] > 100
+            else {"percentage": buffers[0xB4][20], "charging": False}
+        ),
+    ),
+    Device(
+        name="Steam Controller 2",
+        device_type=DeviceType.GAMEPAD,
+        vid=0x28DE,
+        variants=(
+            DeviceVariant(0x1302, 0),   #  28DE:1302 = USB direct
+                                        #  28DE:1303 = Bluetooth >>> HANDLED BY UPOWER MODULE <<<
+            DeviceVariant(0x1304, 2)    #  28DE:1304 = Wireless via puck dongle
+        ),
+        #  byte[0] = 0x43 (report ID), byte[1] = connection state, byte[2] = battery percentage
+        source = InputStreamSchema(
+            charge = DataPos(0x43, 2),
+            charge_range = None,
+            status = ChargingStates(
+                pos = DataPos(0x43, 1),
+                states = {
+                    0x01: False,    # Wireless
+                    0x02: True,     # Puck
+                    0x03: True,     # Transition in between charging->not charging and vice versa
+                    0x04: True,     # USB
+                }
+            )
+        ),
+        parse=None,
+    ),
+    Device(
+        name="ROG Azoth",
+        device_type=DeviceType.KEYBOARD,
+        vid=0x0B05,
+        variants=(
+            # Standard Azoth transports answer battery queries only on input1.
+            # Match the exact HID_PHYS suffix so no command is sent to other
+            # keyboard collections.
+            # Wired USB exposes a 64-byte vendor report without a report ID.
+            # Linux therefore sees 12:01 at bytes 0:1; every payload offset
+            # is one lower than in the report-ID-prefixed protocol.
+            DeviceVariant(
+                0x1A83, 1,
+                source=RequestSchema(
+                    charge=DataPos(0x12, 5),
+                    charge_range=None,
+                    status=ChargingStates(
+                        pos=DataPos(0x12, 8),
+                        states={0x01: True},
+                    ),
+                    request=bytes.fromhex("1201") + b"\x00" * 62,
+                    timeout=REQUEST_TIMEOUT_SEC,
+                    reply_prefix=bytes.fromhex("1201"),
+                ),
+            ),
+            # Standard Azoth 2.4 GHz dongle (PID 1A85).
+            # OMNI receivers are distinct and use the 1ACE profile below.
+            DeviceVariant(0x1A85, 1),
+            # The OMNI receiver exposes keyboard, mouse, vendor, and media
+            # collections.  Its vendor collection is input2 (mi_02&col02),
+            # and uses report ID 2 with 64-byte reports.
+            DeviceVariant(
+                0x1ACE, 2,
+                source=RequestSchema(
+                    charge=DataPos(0x02, 6),
+                    charge_range=None,
+                    status=ChargingStates(
+                        pos=DataPos(0x02, 9),
+                        states={0x01: True},
+                    ),
+                    request=bytes.fromhex("021201") + b"\x00" * 61,
+                    timeout=REQUEST_TIMEOUT_SEC,
+                    reply_prefix=bytes.fromhex("021201"),
+                ),
+            ),
+        ),
+        # The 65-byte 00:12:01 request is echoed by the battery response;
+        # byte 6 is percentage and only state 1 at byte 9 means charging.
+        source=RequestSchema(
+            charge=DataPos(0x00, 6),
+            charge_range=None,
+            status=ChargingStates(
+                pos=DataPos(0x00, 9),
+                states={0x01: True},
+            ),
+            request=bytes.fromhex("001201") + b"\x00" * 62,
+            timeout=REQUEST_TIMEOUT_SEC,
+            reply_prefix=bytes.fromhex("001201"),
+        ),
+        parse=None,
+        serial_resolver=_azoth_serial_resolver,
+    ),
+    Device(
+        name="Razer Barracuda X Chroma",
+        device_type=DeviceType.HEADSET,
+        vid=0x1532,
+        variants=(DeviceVariant(0x0574, None, 0xFF14),),
+        source=RequestSchema(
+            charge=DataPos(RAZER_REPORT_ID, RAZER_VALUE_BYTE),
+            charge_range=None,
+            status=None,
+            timeout=REQUEST_TIMEOUT_SEC,
+            transactions=(
+                RequestTransaction(
+                    key="battery",
+                    request=RAZER_BATTERY_REQUEST,
+                    report_id=RAZER_REPORT_ID,
+                    validate_reply=_razer_reply_check(0x21),
+                ),
+                RequestTransaction(
+                    key="charging",
+                    request=RAZER_CHARGING_REQUEST,
+                    report_id=RAZER_REPORT_ID,
+                    validate_reply=_razer_reply_check(0x2A),
+                ),
+            ),
+        ),
+        parse=_razer_parse,
+    ),
+]
+
+# PIDs whose variants select the battery node by report-descriptor usage page.
+# Descriptors are only read for these: doing it for every hidraw node would
+# mean opening a file per interface on every poll.
+_USAGE_PAGE_PIDS = {variant.pid for dev in KNOWN_DEVICES for variant in dev.variants if variant.usage_page is not None}
+
+
+class FoundDevice(NamedTuple):
+    devpath: str
+    serial:  str
+    desc:    Device
+    pid:     int       # Product ID that actually matched (from sysfs)
+    source:  InputStreamSchema | RequestSchema
+
+# ══════════════════════════════════════════════════════════════════════════
+# hid - sysfs discovery + hidraw I/O
+# ══════════════════════════════════════════════════════════════════════════
+# HID_ID=<bus>:<vendor>:<product> e.g. "0003:00003434:0000D028" -> vendor, product
+_HID_ID_RE = re.compile(r"[0-9a-fA-F]+:([0-9a-fA-F]+):([0-9a-fA-F]+)$")
+# HID_PHYS=<phys-path>/input<iface> e.g. "usb-0000:00:14.0-11/input4" -> phys, iface
+_HID_PHYS_RE = re.compile(r"(.*)/input(\d*)")
+
+def printable_serial(value):
+    """Keep the printable prefix of a device-provided serial string."""
+    value = value.strip()
+    for index, char in enumerate(value):
+        if not char.isprintable():
+            value = value[:index]
+            break
+    return value or None
+
+def meaningful_hid_uniq(value):
+    """Reject missing and all-zero HID unique ids without changing other values."""
+    return value if value and any(char != "0" for char in value) else None
+
+# Returns the USB device serial for this HID node when its parent exposes one.
+# Some devices append malformed bytes to their string descriptor, so retain
+# only its printable prefix before using it as the widget's device identity.
+def usb_serial(path, vid, pid):
+    current = os.path.realpath(os.path.dirname(path))
+    while current != os.path.dirname(current):
+        try:
+            with open(f"{current}/idVendor", "r") as file:
+                parent_vid = int(file.read().strip(), 16)
+            with open(f"{current}/idProduct", "r") as file:
+                parent_pid = int(file.read().strip(), 16)
+            if parent_vid == vid and parent_pid == pid:
+                with open(f"{current}/serial", "r") as file:
+                    serial = printable_serial(file.read())
+                if serial:
+                    return serial
+        except (OSError, ValueError):
+            pass
+        current = os.path.dirname(current)
+    return None
+
+# Reads sysfs uevent file -> (vid, pid, iface, fields, phys) or None on failure.
+# Serial resolution is device-specific, so it deliberately happens after matching.
+def parse_uevent(path):
     try:
-        fd = os.open(dev.devpath, os.O_RDONLY | os.O_NONBLOCK)
+        with open(path, "r") as file:
+            fields = {}
+            for line in file:
+                line = line.rstrip("\r\n")
+                if "=" in line:
+                    key, _, value = line.partition("=")
+                    fields[key] = value
     except OSError:
+        return None
+
+    vid = 0
+    pid = 0
+    m = _HID_ID_RE.match(fields.get("HID_ID", ""))
+    if m:
+        vid = int(m.group(1), 16)
+        pid = int(m.group(2), 16)
+
+    iface = -1
+    phys = fields.get("HID_PHYS", "")
+    m = _HID_PHYS_RE.match(phys)
+    if m:
+        phys = m.group(1)   # shared across a device's interfaces
+        iface = int(m.group(2)) if m.group(2) else -1
+
+    return vid, pid, iface, fields, phys
+
+# Walks a raw HID report descriptor for its usage pages. Item byte: bits 0-1
+# size (0/1/2/4), bits 2-3 type (0 Main, 1 Global, 2 Local), bits 4-7 tag.
+# Usage Page = Global/tag 0, Usage = Local/tag 0. A Usage item is a usage ID
+# *within* the current Usage Page, so a 2-byte usage is still that page - not a
+# page number in its high byte. Collection boundaries are not tracked: the
+# result is a flat set of every page the node declares, which is all the page
+# test in match_device() needs.
+def _parse_usage_pages(data):
+    pages = set()
+    page = 0
+    i = 0
+    n = len(data)
+    while i < n:
+        b = data[i]
+        i += 1
+        if b == 0xFE:  # long item: skip its length byte + payload
+            length = data[i] if i < n else 0
+            i += 1 + length
+            continue
+        item_len = (0, 1, 2, 4)[b & 0x03]
+        if i + item_len > n:
+            break
+        value = data[i:i + item_len]
+        i += item_len
+        btype = (b >> 2) & 0x03
+        btag = (b >> 4) & 0x0F
+        if btype == 1 and btag == 0:  # Global / Usage Page
+            page = int.from_bytes(value, "little")
+            pages.add(page)
+        elif btype == 2 and btag == 0:  # Local / Usage
+            pages.add(page)
+    return pages
+
+# Usage pages declared by the hidraw node's report descriptor; empty on failure
+def hid_usage_pages(path):
+    try:
+        with open(path, "rb") as f:
+            return _parse_usage_pages(f.read())
+    except OSError:
+        return set()
+
+# Returns the matching Device and variant for a given vid/pid/iface, or None.
+# A variant may constrain the interface, the descriptor usage page, or both.
+def match_device(vid, pid, iface, usage_pages=None):
+    for dev in KNOWN_DEVICES:
+        if vid != dev.vid:
+            continue
+        for variant in dev.variants:
+            if pid != variant.pid:
+                continue
+            # usage_page variants select the node by its report-descriptor page.
+            # Only reached once vid/pid already matched a registered variant, so
+            # a vendor-page match can never claim an unrelated device.
+            if variant.usage_page is not None:
+                if not usage_pages:
+                    continue
+                if variant.usage_page == VENDOR_USAGE_PAGE:
+                    # Exact vendor page differs per model, so match the range
+                    if any(page >= 0xFF00 for page in usage_pages):
+                        return dev, variant
+                elif variant.usage_page in usage_pages:
+                    return dev, variant
+                continue
+            # iface = None in a variant means any interface contains batt data
+            if variant.iface is not None and iface != variant.iface:
+                continue
+            return dev, variant
+    return None
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# udev - udev rule files/commands for blocked devices
+# ══════════════════════════════════════════════════════════════════════════
+# A node that can't be opened for the access its schema needs (missing udev
+# rule) is reported as blocked, with the exact command to grant access. One rule
+# file per device covers all its variants; the helper never installs rules.
+UDEV_HEADER = '# Generated by the BatteryWatch widget. Do not edit manually; use the "Copy command" button.'
+
+# Where generated rule files are written; tests redirect this to a sandbox dir.
+UDEV_RULES_DIR = "/etc/udev/rules.d"
+
+def udev_rule_path(vid):
+    return f"{UDEV_RULES_DIR}/70-batterywatch-hid-{vid:04x}.rules"
+
+# Write access needed (RequestSchema sends a packet) vs. read-only stream
+def _udev_mode_for(vid):
+    for dev in KNOWN_DEVICES:
+        if vid == dev.vid:
+            return "0660" if isinstance(dev.source, RequestSchema) else "0440"
+    return "0660"
+
+# One udev rule line per connection variant of the device
+def udev_rule_for(vid):
+    lines = [
+        f'SUBSYSTEM=="hidraw", ATTRS{{idVendor}}=="{vid:04x}", '
+        f'ATTRS{{idProduct}}=="{variant.pid:04x}", '
+        f'MODE="{_udev_mode_for(vid)}", TAG+="uaccess", TAG+="udev-acl"'
+        for dev in KNOWN_DEVICES if dev.vid == vid
+        for variant in dev.variants
+    ]
+    if lines:
+        return "\n".join(lines)
+    # Unknown device: a vid-wide rule still helps the owner track it down
+    return (
+        f'SUBSYSTEM=="hidraw", ATTRS{{idVendor}}=="{vid:04x}", '
+        f'MODE="{_udev_mode_for(vid)}", TAG+="uaccess", TAG+="udev-acl"'
+    )
+
+# True when the udev rule for this device (all its variants) is installed
+def _rule_exists(vid):
+    return os.path.exists(udev_rule_path(vid))
+
+# Wrapped in `sudo sh -c '...'` so the heredoc pastes in sh/bash/zsh/fish
+def udev_unblock_command(vid):
+    path = udev_rule_path(vid)
+    body = "\n".join([UDEV_HEADER] + udev_rule_for(vid).split("\n"))
+    return (
+        f"sudo sh -c 'tee {path} >/dev/null <<EOF\n"
+        f"{body}\n"
+        f"EOF'\n"
+        f"sudo udevadm control --reload-rules && sudo udevadm trigger"
+    )
+
+# Goes through /sys/class/hidraw* and collects all known interfaces
+def find_devices():
+    devices = []
+    seen = set()
+    try:
+        entries = os.listdir("/sys/class/hidraw")
+    except OSError:
+        return devices
+
+    for name in entries:
+        if len(devices) >= MAX_DEVICES:
+            break
+        if name.startswith("."):
+            continue
+
+        parsed = parse_uevent(f"/sys/class/hidraw/{name}/device/uevent")
+        if parsed is None:
+            continue
+        vid, pid, iface, fields, phys = parsed
+
+        usage_pages = hid_usage_pages(f"/sys/class/hidraw/{name}/device/report_descriptor") if pid in _USAGE_PAGE_PIDS else set()
+        matched = match_device(vid, pid, iface, usage_pages)
+        if matched is None:
+            if pid in _USAGE_PAGE_PIDS:
+                # The usage page is what selects the battery node among a
+                # device's interfaces, so a miss here is worth explaining
+                debug(f"{name}: {vid:04x}:{pid:04x} (iface {iface}) has usage pages "
+                      f"{sorted(hex(p) for p in usage_pages) or 'none'}, "
+                      f"none matching a known battery node")
+            continue
+        desc, variant = matched
+
+        serial = (desc.serial_resolver(f"/sys/class/hidraw/{name}/device/uevent", vid, pid, fields)
+                  if desc.serial_resolver is not None
+                  else meaningful_hid_uniq(fields.get("HID_UNIQ", "")) or "unknown-hid")
+
+        # One entry per physical device: iface=None matches every interface, so
+        # skip ones already taken (phys is shared across a device's interfaces)
+        key = (desc.name, phys or name)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        # Fall back to the physical path when the device reports no serial, so
+        # multiple identical dongles get distinct ids.
+        if serial == "unknown-hid":
+            serial = phys or name
+
+        devpath = f"/dev/{name}"
+        debug(f"{devpath}: reading {desc.name} {vid:04x}:{pid:04x} "
+              f"(iface {iface}, usage pages {[hex(p) for p in sorted(usage_pages)] or 'not read'})")
+        devices.append(FoundDevice(devpath, serial, desc, pid, variant.source or desc.source))
+    return devices
+
+# True when the device is present but its hidraw node can't be opened for the
+# access level the schema needs (missing udev rule). Asleep devices *can* be
+# opened, so this only fires for a genuine permissions problem.
+def is_blocked(dev):
+    needs_write = isinstance(dev.source, RequestSchema)
+    flags = os.O_RDWR if needs_write else os.O_RDONLY
+    try:
+        fd = os.open(dev.devpath, flags | os.O_NONBLOCK)
+        os.close(fd)
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+
+# Opens a hidraw device, sends request packet if schema requires it. Returns fd or None.
+def open_device(dev, schema):
+    needs_write = isinstance(schema, RequestSchema)
+    flags = os.O_RDWR if needs_write else os.O_RDONLY
+    try:
+        fd = os.open(dev.devpath, flags | os.O_NONBLOCK)
+    except OSError as e:
+        debug(f"{dev.desc.name}: open({dev.devpath}, "
+              f"{'O_RDWR' if needs_write else 'O_RDONLY'}) failed: {e}")
+        return None
+
+    if needs_write and not schema.transactions:
+        try:
+            debug(f"{dev.desc.name}: write {hexbuf(schema.request)} ({len(schema.request)} bytes)")
+            os.write(fd, schema.request)
+        except OSError as e:
+            debug(f"{dev.desc.name}: write of {hexbuf(schema.request)} failed: {e}")
+            os.close(fd)
+            return None
+
+    return fd
+
+# Runs a short ordered sequence of request/reply exchanges on one open node.
+# Every step must succeed before parse() sees any replies, so callers never get
+# a partial battery state.
+def read_transaction_status_hw(dev, schema):
+    fd = open_device(dev, schema)
+    if fd is None:
         return None
 
     try:
         poller = select.poll()
         poller.register(fd, select.POLLIN)
-        deadline = time.monotonic() + TIMEOUT_SEC
+        replies = {}
+
+        for transaction in schema.transactions:
+            try:
+                debug(f"{dev.desc.name}: write {hexbuf(transaction.request)} "
+                      f"({len(transaction.request)} bytes) [{transaction.key}]")
+                written = os.write(fd, transaction.request)
+            except OSError as e:
+                debug(f"{dev.desc.name}: write of {hexbuf(transaction.request)} failed: {e}")
+                return None
+            if written != len(transaction.request):
+                debug(f"{dev.desc.name}: short write for {transaction.key}: "
+                      f"{written} of {len(transaction.request)} bytes")
+                return None
+
+            # Timeout applies per transaction; a full sequence may take N * timeout.
+            deadline = time.monotonic() + schema.poll_timeout()
+            read_size = max(HID_BUFFER_SIZE, len(transaction.request))
+            while True:
+                timeout_ms = int((deadline - time.monotonic()) * 1000)
+                if timeout_ms <= 0:
+                    debug(f"{dev.desc.name}: no accepted reply for {transaction.key} "
+                          f"within {schema.poll_timeout():g}s ({dev.devpath})")
+                    return None
+
+                events = poller.poll(timeout_ms)
+                if not events:
+                    debug(f"{dev.desc.name}: no accepted reply for {transaction.key} "
+                          f"within {schema.poll_timeout():g}s ({dev.devpath})")
+                    return None
+
+                _, revents = events[0]
+                if revents & (select.POLLERR | select.POLLHUP | select.POLLNVAL):
+                    debug(f"{dev.desc.name}: device error or disconnect "
+                          f"(poll flags {revents:#x})")
+                    return None
+                if not (revents & select.POLLIN):
+                    return None
+
+                try:
+                    buf = os.read(fd, read_size)
+                except OSError as e:
+                    debug(f"{dev.desc.name}: read failed: {e}")
+                    return None
+                if not buf:
+                    continue
+
+                debug(f"{dev.desc.name}: received {hexbuf(buf)} ({len(buf)} bytes) "
+                      f"[{transaction.key}]")
+                reason = transaction.rejection_reason(buf)
+                if reason is not None:
+                    debug(f"{dev.desc.name}: ignored: {reason}")
+                    continue
+
+                replies[transaction.key] = buf
+                break
+
+        if dev.desc.parse is None:
+            return None
+        result = dev.desc.parse(replies)
+        debug(f"{dev.desc.name}: reading {result}")
+        return result
+    finally:
+        os.close(fd)
+
+# Reads a device's power status: waits for a report the schema accepts or for
+# the schema's timeout. O_NONBLOCK + poll() makes it sleep in kernel with 0 CPU
+# utilisation. Returns status dict {"percentage", "charging"} or None.
+def read_status_hw(dev):
+    schema = dev.source
+    if isinstance(schema, RequestSchema) and schema.transactions:
+        return read_transaction_status_hw(dev, schema)
+
+    needed = needed_reports(schema)
+    # Most devices use 64-byte reports.  Some request-response devices, such
+    # as the ROG Azoth, use a 65-byte report including report ID, so read at
+    # least as much as the schema's request packet.
+    read_size = max(HID_BUFFER_SIZE, len(schema.request)) if isinstance(schema, RequestSchema) else HID_BUFFER_SIZE
+
+    fd = open_device(dev, schema)
+    if fd is None:
+        return None
+
+    try:
+        poller = select.poll()
+        poller.register(fd, select.POLLIN)
+        deadline = time.monotonic() + schema.poll_timeout()
         buffers = {}
+        wanted = ", ".join(f"{r:#04x}" for r in needed)
+
+        def no_reply():
+            debug(f"{dev.desc.name}: no accepted reply (report {wanted}) within "
+                  f"{schema.poll_timeout():g}s ({dev.devpath})")
+            return None
 
         while True:
             timeout_ms = int((deadline - time.monotonic()) * 1000)
             if timeout_ms <= 0:
-                return None
+                return no_reply()
 
             events = poller.poll(timeout_ms)
             if not events:
-                return None
+                return no_reply()
 
             _, revents = events[0]
             # POLLERR/POLLHUP/POLLNVAL = device error / disconnected / invalid FD
             if revents & (select.POLLERR | select.POLLHUP | select.POLLNVAL):
+                debug(f"{dev.desc.name}: device error or disconnect "
+                      f"(poll flags {revents:#x})")
                 return None
             if not (revents & select.POLLIN):
                 return None
 
             try:
-                buf = os.read(fd, HID_BUFFER_SIZE)
-            except OSError:
+                buf = os.read(fd, read_size)
+            except OSError as e:
+                debug(f"{dev.desc.name}: read failed: {e}")
                 return None
             if not buf:
                 continue
 
+            debug(f"{dev.desc.name}: received {hexbuf(buf)} ({len(buf)} bytes)")
             report_id = buf[0]
-            if report_id not in needed or len(buf) < needed[report_id]:
+            if report_id not in needed:
+                debug(f"{dev.desc.name}: ignored: report id {report_id:#04x} is not a "
+                      f"battery report - this device answers on {wanted}")
+                continue
+            if len(buf) < needed[report_id]:
+                debug(f"{dev.desc.name}: ignored: {len(buf)} bytes is fewer than the "
+                      f"{needed[report_id]} needed to read report {report_id:#04x}")
+                continue
+            reason = schema.rejection_reason(buf)
+            if reason is not None:
+                debug(f"{dev.desc.name}: ignored: {reason}")
                 continue
 
             buffers[report_id] = buf
-            # interpret every report of a schema
             # parse(), if set, sees only such report, so every byte needs to be declared via charge/status positions
             if all(r in buffers for r in needed):
                 if dev.desc.parse is not None:
-                    return dev.desc.parse(buffers)
-                return interpret(schema, buffers)
+                    result = dev.desc.parse(buffers)
+                    if result is KEEP_READING:
+                        debug(f"{dev.desc.name}: {hexbuf(buf)} looks plausible "
+                              f"but parse() says keep waiting")
+                        buffers.pop(report_id, None)  # not the battery frame; keep waiting for a better one
+                        continue
+                    debug(f"{dev.desc.name}: reading {result}")
+                    return result
+                status = interpret(schema, buffers)
+                debug(f"{dev.desc.name}: reading {status}")
+                return status
     finally:
         os.close(fd)
 
-# Minimal JSON string escape, so " and \ don't break the struct
-def jstr(s):
-    return s.replace("\\", "\\\\").replace('"', '\\"')
+# Stateless: reports a current reading or nothing; no state between runs.
+def read_status(dev):
+    return read_status_hw(dev)
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# cli - JSON output consumed by the widget
+# ══════════════════════════════════════════════════════════════════════════
+# Testing mode (no hardware): fake devices that mirror real behavior - each one
+# looks blocked until its udev rule exists, then reports a battery.
+_SIMULATE_DEVICES = [
+    ("Keychron M5", "sim-keychron-m5", 0x3434, "d028", "mouse", 88, False),
+    ("Steam Controller 2", "sim-steam-controller-2", 0x28DE, "1304", "gamepad", 85, True),
+]
+
+def _simulate():
+    out = []
+    for name, serial, vid, pid, dtype, pct, charging in _SIMULATE_DEVICES:
+        if _rule_exists(vid):
+            out.append({"name": name, "serial": serial, "percentage": pct,
+                        "charging": charging, "deviceType": dtype})
+        else:
+            out.append({"name": name, "serial": serial, "blocked": True,
+                        "vid": f"{vid:04x}", "pid": pid,
+                        "unblock_command": udev_unblock_command(vid),
+                        "deviceType": dtype})
+    return out
+
+# Turns one found device into its JSON dict, or None when it neither reported
+# a battery nor is blocked (e.g. present but asleep).
+def _device_entry(dev):
+    status = read_status(dev)
+    if status is not None:
+        return {"name": dev.desc.name, "serial": dev.serial,
+                "percentage": status["percentage"], "charging": status["charging"],
+                "deviceType": dev.desc.device_type.value}
+    if is_blocked(dev):
+        # Present but no permission to open: offer the exact command to authorize it
+        return {"name": dev.desc.name, "serial": dev.serial, "blocked": True,
+                "vid": f"{dev.desc.vid:04x}", "pid": f"{dev.pid:04x}",
+                "unblock_command": udev_unblock_command(dev.desc.vid),
+                "deviceType": dev.desc.device_type.value}
+    # Found, openable, but no reading - e.g. a headset the schema can't make
+    # answer. Normally this entry is dropped (invisible); with --debug we make
+    # the drop explicit so the cause is visible in the helper's stderr.
+    debug(f"{dev.desc.name}: found but read returned nothing - entry dropped "
+          f"({dev.devpath})")
+    return None
 
 def main():
+    if _DEBUG:
+        # Strip the flag so the logic below sees the same argv as without it.
+        sys.argv.pop(sys.argv.index("--debug"))
+    if len(sys.argv) > 1 and sys.argv[1] == "--simulate":
+        print(json.dumps(_simulate()))
+        sys.exit(0)
+
     parts = []
     for dev in find_devices():
-        status = read_status(dev)
-        if status is None:
-            continue
-        parts.append(
-            '{"name":"%s","serial":"%s","percentage":%d,"charging":%s,"deviceType":"%s"}' % (
-                jstr(dev.desc.name),
-                jstr(dev.serial),
-                status["percentage"],
-                "true" if status["charging"] else "false",
-                jstr(dev.desc.device_type.value),
-            )
-        )
-    print("[" + ",".join(parts) + "]")
+        entry = _device_entry(dev)
+        if entry is not None:
+            parts.append(entry)
+    print(json.dumps(parts))
 
 if __name__ == "__main__":
     main()

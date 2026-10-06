@@ -59,17 +59,7 @@ jobs:
           } >> $GITHUB_OUTPUT
       
       - name: Build plasmoid
-        run: |
-          mkdir -p dist
-          zip -r dist/BatteryWatch.plasmoid . \
-            -x "contents/screenshots/*" \
-            -x "build-plasmoid.sh" \
-            -x ".git/*" \
-            -x ".github/*" \
-            -x ".gitignore" \
-            -x "dist/*"
-          echo "Built: dist/BatteryWatch.plasmoid"
-          ls -lh dist/BatteryWatch.plasmoid
+        run: ./build-plasmoid.sh
       
       - name: Create Git tag
         run: |

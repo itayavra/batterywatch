@@ -2,6 +2,7 @@ import QtQuick 2.15
 import org.kde.plasma.plasma5support 2.0 as P5Support
 import org.kde.plasma.plasmoid 2.0
 import "../DeviceUtils.js" as DeviceUtils
+import "../GVariant.js" as GVariant
 
 Item {
     id: root
@@ -119,11 +120,16 @@ Item {
             }
 
             // gdbus outputs GVariant format: (['id1', 'id2'],)
-            const ids = []
-            const re = /'([^']+)'/g
-            let m
-            while ((m = re.exec(data.stdout)) !== null)
-                ids.push(m[1])
+            let ids;
+            try {
+                ids = GVariant.parseReply(data.stdout);
+                if (!Array.isArray(ids) || !ids.every(id => typeof id === "string"))
+                    throw new Error("expected an array of device ids");
+            } catch (error) {
+                console.warn(i18n("BatteryWatch: unreadable KDE Connect reply (%1)", error.message));
+                return;
+            }
+
             const wasEmpty = Object.keys(root.knownDevices).length === 0
             let current = {}
 
@@ -168,13 +174,26 @@ Item {
             if (!match) return
             const id = match[1]
             if (!root.deviceData[id]) return
-            if (data["exit code"] !== 0 || !data.stdout.trim()) return
+            if (data["exit code"] !== 0) return
 
             // gdbus GetAll output: ({'name': <'Phone'>, 'type': <'phone'>, ...},)
-            const nameMatch = data.stdout.match(/'name': <'((?:[^'\\]|\\.)*)'>/)
-            const typeMatch = data.stdout.match(/'type': <'((?:[^'\\]|\\.)*)'>/)
-            if (nameMatch) root.deviceData[id].name = nameMatch[1]
-            if (typeMatch) root.deviceData[id].type = typeMatch[1]
+            let properties;
+            try {
+                properties = GVariant.parseReply(data.stdout);
+                if (!properties || typeof properties !== "object" || Array.isArray(properties))
+                    throw new Error("expected a property dictionary");
+                if (properties.name !== undefined && typeof properties.name !== "string")
+                    throw new Error("expected 'name' to be a string");
+                if (properties.type !== undefined && typeof properties.type !== "string")
+                    throw new Error("expected 'type' to be a string");
+            } catch (error) {
+                console.warn(i18n("BatteryWatch: unreadable KDE Connect reply (%1)", error.message));
+                return;
+            }
+
+            // A missing property keeps its previous value
+            if (typeof properties.name === "string") root.deviceData[id].name = properties.name
+            if (typeof properties.type === "string") root.deviceData[id].type = properties.type
             Qt.callLater(root.updateDevices)
         }
     }
@@ -194,13 +213,29 @@ Item {
             if (!match) return
             const id = match[1]
             if (!root.deviceData[id]) return
-            if (data["exit code"] !== 0 || !data.stdout.trim()) return
+            if (data["exit code"] !== 0) return
 
             // gdbus GetAll output: ({'charge': <75>, 'isCharging': <false>},)
-            const chargeMatch = data.stdout.match(/'charge': <(-?\d+)>/)
-            const chargingMatch = data.stdout.match(/'isCharging': <(true|false)>/)
-            if (chargeMatch) root.deviceData[id].charge = parseInt(chargeMatch[1])
-            if (chargingMatch) root.deviceData[id].charging = chargingMatch[1] === "true"
+            let properties;
+            try {
+                properties = GVariant.parseReply(data.stdout);
+                if (!properties || typeof properties !== "object" || Array.isArray(properties))
+                    throw new Error("expected a property dictionary");
+                if (properties.charge !== undefined
+                    && (typeof properties.charge !== "number" || !Number.isFinite(properties.charge)))
+                    throw new Error("expected 'charge' to be a finite number");
+                if (properties.isCharging !== undefined && typeof properties.isCharging !== "boolean")
+                    throw new Error("expected 'isCharging' to be a boolean");
+            } catch (error) {
+                console.warn(i18n("BatteryWatch: unreadable KDE Connect reply (%1)", error.message));
+                return;
+            }
+
+            // A missing property keeps its previous value
+            if (typeof properties.charge === "number" && Number.isFinite(properties.charge))
+                root.deviceData[id].charge = properties.charge
+            if (typeof properties.isCharging === "boolean")
+                root.deviceData[id].charging = properties.isCharging
             Qt.callLater(root.updateDevices)
         }
     }

@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import org.kde.plasma.plasma5support 2.0 as P5Support
+import org.kde.plasma.plasmoid 2.0
 import "../DeviceUtils.js" as DeviceUtils
 
 // UPower device provider
@@ -7,6 +8,7 @@ Item {
     id: root
     visible: false
     
+    property bool upowerEnabled: Plasmoid.configuration.enableUPowerIntegration
     property var devices: []
     
     readonly property int wiredType: 0
@@ -16,10 +18,16 @@ Item {
     // UPower device type overrides for devices incorrectly reported by UPower
     readonly property var upowerDeviceTypeOverrides: ({
         "logitech k400 plus": "keyboard",  // Keyboard with touchpad, reported as mouse
-        "pro x wireless": "mouse",  // Wireless mouse, reported as keyboard when connected via USB cable
+        // Wireless mice, reported as keyboards when connected via USB cable
+        "pro x wireless": "mouse",
+        "logitech g903 wired/wireless gaming mouse": "mouse",
+        // PowerPlay / Lightspeed: HID++ advertises G-keys as a keyboard collection
+        "g502 lightspeed wireless gaming mouse": "mouse",
     })
     
     function refresh() {
+        if (!root.upowerEnabled)
+            return
         listSource.connectSource("upower -e")
         root.devices.forEach(d => {
             if (d.objectPath) {
@@ -27,6 +35,19 @@ Item {
                 detailsSource.connectSource("upower -i " + d.objectPath)
             }
         })
+    }
+
+    onUpowerEnabledChanged: {
+        if (root.upowerEnabled) {
+            root.refresh()
+            return
+        }
+        listSource.disconnectSource("upower -e")
+        root.devices.forEach(d => {
+            if (d.objectPath)
+                detailsSource.disconnectSource("upower -i " + d.objectPath)
+        })
+        root.devices = []
     }
     
     // Parse UPower text output into device object
@@ -45,7 +66,9 @@ Item {
             bluetoothAddress: "",
             source: "upower",
             batteries: [],
-            model: ""
+            model: "",
+            batteryLevel: "",
+            percentageIgnored: false
         }
 
         var deviceType = ""
@@ -65,8 +88,22 @@ Item {
                 device.name = device.model
             }
             else if (trimmedLine.indexOf("percentage:") !== -1) {
-                var percentStr = trimmedLine.split(":")[1].trim().replace("%", "")
-                device.percentage = parseInt(percentStr)
+                var percentStr = trimmedLine.split(":")[1].trim()
+                // UPower appends "(should be ignored)" when it is serving a
+                // reading it does not trust - a stale or absent battery.
+                // Strip it before parsing, and remember that it was there.
+                device.percentageIgnored = percentStr.indexOf("should be ignored") !== -1
+                device.percentage = parseInt(percentStr.replace("%", "").replace("(should be ignored)", ""))
+            }
+            else if (trimmedLine.indexOf("battery-level:") !== -1) {
+                // A HID++ battery node stays registered as long as the *receiver*
+                // is powered, so a mouse that is switched off keeps appearing in
+                // `upower -e`. UPower then reports battery-level "unknown" with
+                // "0% (should be ignored)" - a parse of which yields 0 and passes
+                // the percentage gate below, pinning the device in the list at 0%.
+                // battery-level is the signal that distinguishes that stale node
+                // from a real battery that is genuinely empty ("empty").
+                device.batteryLevel = trimmedLine.split(":")[1].trim()
             }
             else if (trimmedLine.indexOf("state:") !== -1) {
                 device.charging = trimmedLine.split(":")[1].trim() === "charging"
@@ -95,6 +132,18 @@ Item {
                 // Extract and normalize MAC address for bluetoothctl
                 if (macMatch) {
                     device.bluetoothAddress = macMatch[1].replace(/[_\-]/g, ":").toUpperCase()
+                }
+            } else if (path.indexOf("hidpp") !== -1 && device.serial) {
+                // hidpp batteries put their transport in the serial: a fully
+                // colon-separated MAC means Bluetooth. Other transports (USB
+                // receiver, cable) report a dash-separated uniq or a raw
+                // HID++ serial - never a colon MAC - so nothing false-matches
+                var serialMac = device.serial.match(/^([0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2})$/i)
+                if (serialMac) {
+                    device.connectionType = root.bluetoothType
+                    device.bluetoothAddress = serialMac[1].replace(/[_\-]/g, ":").toUpperCase()
+                } else {
+                    device.connectionType = root.wirelessType
                 }
             } else {
                 device.connectionType = root.wirelessType
@@ -152,6 +201,10 @@ Item {
         
         onNewData: (sourceName, data) => {
             disconnectSource(sourceName)
+            if (!root.upowerEnabled) {
+                root.devices = []
+                return
+            }
             
             var lines = data["stdout"].split("\n")
             var foundPaths = []
@@ -181,7 +234,7 @@ Item {
             }
         }
         
-        Component.onCompleted: connectSource("upower -e")
+        Component.onCompleted: if (root.upowerEnabled) connectSource("upower -e")
     }
     
     P5Support.DataSource {
@@ -191,9 +244,28 @@ Item {
         interval: 10000
 
         onNewData: (sourceName, data) => {
+            if (!root.upowerEnabled) {
+                root.devices = []
+                return
+            }
             var objectPath = sourceName.split(" ").pop()
             var info = parseUPowerOutput(data["stdout"], objectPath)
-            
+
+            // A receiver-backed HID++ battery stays enumerated while the device behind it
+            // is off, so `upower -e` cannot drop it - only its detail reply can.
+            // UPower then serves a stale reading flagged "(should be ignored)"
+            // alongside battery-level "unknown". Requiring BOTH keeps this
+            // conservative: a device with no usable battery reading has nothing
+            // to show, while a genuinely empty battery reports "empty" and a
+            // trusted percentage and is kept.
+            if (info && info.batteryLevel === "unknown" && info.percentageIgnored) {
+                var without = root.devices.filter(d => d.objectPath !== objectPath)
+                if (without.length !== root.devices.length) {
+                    root.devices = without.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+                }
+                return
+            }
+
             if (info && info.connectionType !== root.wiredType && info.percentage >= 0) {
                 // Update or add device
                 var updated = false
@@ -217,7 +289,7 @@ Item {
     
     Timer {
         interval: 2000
-        running: true
+        running: root.upowerEnabled
         repeat: true
         onTriggered: listSource.connectSource("upower -e")
     }

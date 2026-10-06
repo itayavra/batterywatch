@@ -2,6 +2,7 @@ import QtQuick 2.15
 import org.kde.plasma.plasma5support 2.0 as P5Support
 import org.kde.plasma.plasmoid 2.0
 import "../DeviceUtils.js" as DeviceUtils
+import "../GVariant.js" as GVariant
 
 // Razer device provider
 // Based on UPowerProvider.qml
@@ -11,8 +12,10 @@ Item {
     id: root
     visible: false
 
-    // Helper getDevices var
-    readonly property string getDeviceListCmd: "qdbus org.razer /org/razer razer.devices.getDevices"
+    // org.razer is on the session bus
+    readonly property string getDeviceListCmd: "gdbus call --session --dest org.razer --object-path /org/razer --method razer.devices.getDevices"
+
+    property bool daemonUnavailable: false
 
     // Can't test this as I don't have means to connect mouse to PC via Bluetooth
     // but based on what I found on the openrazer github, Bluetooth is currently
@@ -58,6 +61,10 @@ Item {
     // ═══════════════════════════════════════════════════════════════════════
     // HELPER FUNCTIONS
     // ═══════════════════════════════════════════════════════════════════════
+
+    function deviceCmd(id, method) {
+        return `gdbus call --session --dest org.razer --object-path /org/razer/device/${id} --method razer.device.${method}`;
+    }
 
     // Updates the device model from the current internal state
     function updateOpenRazerDevices() {
@@ -119,16 +126,16 @@ Item {
     }
 
     function fetchNameAndType(id) {
-        detailsSource.connectSource(`qdbus org.razer /org/razer/device/${id} razer.device.misc.getDeviceName`);
-        detailsSource.connectSource(`qdbus org.razer /org/razer/device/${id} razer.device.misc.getDeviceType`);
+        detailsSource.connectSource(deviceCmd(id, "misc.getDeviceName"));
+        detailsSource.connectSource(deviceCmd(id, "misc.getDeviceType"));
     }
 
     function fetchPowerInfo(id) {
         if (!deviceData[id])
             return;
-        batterySource.connectSource(`qdbus org.razer /org/razer/device/${id} razer.device.power.getBattery`);
-        chargingSource.connectSource(`qdbus org.razer /org/razer/device/${id} razer.device.power.isCharging`);
-        detailsSource.connectSource(`qdbus org.razer /org/razer/device/${id} razer.device.misc.getFirmware`);
+        batterySource.connectSource(deviceCmd(id, "power.getBattery"));
+        chargingSource.connectSource(deviceCmd(id, "power.isCharging"));
+        detailsSource.connectSource(deviceCmd(id, "misc.getFirmware"));
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -147,10 +154,36 @@ Item {
         onNewData: (src, data) => {
             disconnectSource(src);
 
-            const ids = data.stdout.split("\n").map(s => s.trim()).filter(Boolean);
+            if (!root.razerEnabled)
+                return;
+
+            // a failed call used to look exactly like "no Razer devices"
+            if (data["exit code"] !== 0) {
+                if (Object.keys(root.knownDevices).length > 0) {
+                    root.devices = [];
+                    root.deviceData = {};
+                    root.knownDevices = {};
+                }
+                if (!root.daemonUnavailable) {
+                    root.daemonUnavailable = true;
+                    // i18n: %1 is the error message of the D-Bus call.
+                    console.log(i18n("BatteryWatch: OpenRazer daemon unavailable (%1)", (data.stderr || "").trim()));
+                }
+                return;
+            }
+            root.daemonUnavailable = false;
+
+            let ids;
+            try {
+                ids = GVariant.parseReply(data.stdout);
+                if (!Array.isArray(ids) || !ids.every(id => typeof id === "string"))
+                    throw new Error("expected an array of device ids");
+            } catch (error) {
+                console.warn(i18n("BatteryWatch: unreadable OpenRazer reply (%1)", error.message));
+                return;
+            }
 
             let current = {};
-
             ids.forEach(id => {
                 current[id] = true;
 
@@ -206,16 +239,25 @@ Item {
                 return;
 
             // Non-battery device
-            if (data.stderr && data.stderr.includes("UnknownMethod")) {
+            if ((data.stderr || "").includes("UnknownMethod")) {
                 delete root.deviceData[id];
                 Qt.callLater(root.updateOpenRazerDevices);
                 return;
             }
 
-            // 0 is handled in updateOpenRazerDevices()
-            const raw = parseFloat(data.stdout);
-            if (isNaN(raw))
+            if (data["exit code"] !== 0)
                 return;
+
+            // 0 is handled in updateOpenRazerDevices()
+            let raw;
+            try {
+                raw = GVariant.parseReply(data.stdout);
+                if (typeof raw !== "number" || !Number.isFinite(raw))
+                    throw new Error("expected a finite number");
+            } catch (error) {
+                console.warn(i18n("BatteryWatch: unreadable OpenRazer reply (%1)", error.message));
+                return;
+            }
             root.deviceData[id].battery = Math.round(Math.max(0, Math.min(100, raw)));
 
             Qt.callLater(root.updateOpenRazerDevices);
@@ -241,9 +283,18 @@ Item {
             if (!root.deviceData[id])
                 return;
 
-            if (data.stderr && data.stderr.length > 0)
+            if (data["exit code"] !== 0)
                 return;
-            root.deviceData[id].charging = data.stdout.trim() === "true";
+            let charging;
+            try {
+                charging = GVariant.parseReply(data.stdout);
+                if (typeof charging !== "boolean")
+                    throw new Error("expected a boolean");
+            } catch (error) {
+                console.warn(i18n("BatteryWatch: unreadable OpenRazer reply (%1)", error.message));
+                return;
+            }
+            root.deviceData[id].charging = charging;
 
             Qt.callLater(root.updateOpenRazerDevices);
         }
@@ -269,15 +320,27 @@ Item {
             }
             // name/type fetched once on connect
             // ignore errors to avoid overwriting with empty/garbage values
-            if (data.stderr && data.stderr.length > 0) {
+            if (data["exit code"] !== 0 || (data.stderr || "").trim().length > 0) {
                 return;
             }
-            if (src.endsWith("getDeviceName")) {
-                root.deviceData[id].name = data.stdout.trim();
-            } else if (src.endsWith("getDeviceType")) {
-                root.deviceData[id].type = data.stdout.trim();
-            } else if (src.endsWith("getFirmware")) {
-                root.deviceData[id].firmware = data.stdout.trim();
+            let value;
+            try {
+                value = GVariant.parseReply(data.stdout);
+                if (typeof value !== "string")
+                    throw new Error("expected a string");
+            } catch (error) {
+                console.warn(i18n("BatteryWatch: unreadable OpenRazer reply (%1)", error.message));
+                return;
+            }
+            if (value.length === 0)
+                return;
+
+            if (src.includes("misc.getDeviceName")) {
+                root.deviceData[id].name = value;
+            } else if (src.includes("misc.getDeviceType")) {
+                root.deviceData[id].type = value;
+            } else if (src.includes("misc.getFirmware")) {
+                root.deviceData[id].firmware = value;
             }
 
             Qt.callLater(root.updateOpenRazerDevices);

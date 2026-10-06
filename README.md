@@ -31,7 +31,9 @@
 | **OpenLinkHub** | Corsair and other devices managed by [OpenLinkHub](https://github.com/jurkovic-nikola/OpenLinkHub) |
 | **OpenRazer** | Razer peripherals via [OpenRazer](https://openrazer.github.io/) |
 | **KDE Connect** | Battery levels of paired KDE Connect devices (phones, tablets, etc), with easy unpair action |
-| **HID Devices** | Peripherals read directly via Linux HID (currently supports Steam Controller 2) |
+| **HID Devices** | Peripherals read directly via Linux HID (currently supports Steam Controller 2, Keychron M5, ROG Azoth, and Razer Barracuda X Chroma) |
+| **Solaar** (experimental) | Logitech HID++ peripherals via [Solaar](https://github.com/pwr-Solaar/Solaar) - only tested on a few devices, so feedback is welcome |
+
 
 ## Installation
 
@@ -86,12 +88,13 @@ For instructions on how to contribute translations, add new languages, or test c
 ## Supported Languages
 
 <!-- TRANSLATIONS_START -->
-| Locale | Language | Status | % Done |
-|--------|----------|--------|--------|
-| cs     | Czech        | ✅ Complete |   100% |
-| he     | Hebrew       | ✅ Complete |   100% |
-| hu     | Hungarian    | ✅ Complete |   100% |
-| nl     | Dutch        | ✅ Complete |   100% |
-| pl     | polish       | ✅ Complete |   100% |
-| ru     | Russian      | ✅ Complete |   100% |
+| Locale | Language | Status         | % Done |
+|--------|----------|----------------|--------|
+| cs     | Czech        | 🟡 In Progress |    93% |
+| de     | German       | ✅ Complete    |   100% |
+| he     | Hebrew       | 🟡 In Progress |    93% |
+| hu     | Hungarian    | 🟡 In Progress |    93% |
+| nl     | Dutch        | 🟡 In Progress |    93% |
+| pl     | polish       | 🟡 In Progress |    93% |
+| ru     | Russian      | 🟡 In Progress |    93% |
 <!-- TRANSLATIONS_END -->
