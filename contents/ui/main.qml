@@ -47,11 +47,15 @@ PlasmoidItem {
         id: solaarProvider
     }
 
+    HeadsetControlProvider {
+        id: headsetControlProvider
+    }
+
     // List of providers (in priority order).
     // Vendor-specific sources come first, since each talks to its own devices
     // with maintained per-model knowledge
     // The HID helper is the last-resort direct reader.
-    property var providers: [companionProvider, openLinkHubProvider, openRazerProvider, kdeConnectProvider, solaarProvider, hidDevicesProvider, bluezProvider, upowerProvider]
+    property var providers: [companionProvider, openLinkHubProvider, openRazerProvider, kdeConnectProvider, headsetControlProvider, solaarProvider, hidDevicesProvider, bluezProvider, upowerProvider]
 
     // Debug mode
     property bool debugMode: Plasmoid.configuration.debugMode
@@ -93,11 +97,11 @@ PlasmoidItem {
     }
 
     function copyUnblockCommand(device) {
-        copyBuffer.text = unblockCommandFor(device)
-        copyBuffer.selectAll()
-        copyBuffer.copy()
-        root.commandCopied = true
-        copyFeedbackTimer.restart()
+        copyBuffer.text = unblockCommandFor(device);
+        copyBuffer.selectAll();
+        copyBuffer.copy();
+        root.commandCopied = true;
+        copyFeedbackTimer.restart();
     }
 
     // Invisible buffer so copy works in any QML runtime (plasmashell,
@@ -171,9 +175,13 @@ PlasmoidItem {
         if (later.blocked === true || (winner.batteries && winner.batteries.length > 0))
             return winner;
         if (winner.percentage == null && later.percentage != null)
-            winner = Object.assign({}, winner, { percentage: later.percentage });
+            winner = Object.assign({}, winner, {
+                percentage: later.percentage
+            });
         if (winner.charging == null && later.charging != null)
-            winner = Object.assign({}, winner, { charging: later.charging });
+            winner = Object.assign({}, winner, {
+                charging: later.charging
+            });
         return winner;
     }
 
@@ -298,8 +306,7 @@ PlasmoidItem {
     function loadHiddenDevices() {
         var saved = Plasmoid.configuration.hiddenDevices;
         if (saved) {
-            hiddenDevices = saved.split(",").filter(s => s.length > 0)
-                .map(s => DeviceUtils.canonicalSerial(s));
+            hiddenDevices = saved.split(",").filter(s => s.length > 0).map(s => DeviceUtils.canonicalSerial(s));
         } else {
             hiddenDevices = [];
         }
@@ -534,9 +541,7 @@ PlasmoidItem {
                                         }
 
                                         PlasmaComponents.Label {
-                                            text: device.blocked === true
-                                                ? i18n("Permission needed - run the command in a terminal")
-                                                : device.serial
+                                            text: device.blocked === true ? i18n("Permission needed - run the command in a terminal") : device.serial
                                             font.pixelSize: Kirigami.Theme.smallFont.pixelSize
                                             color: device.blocked === true ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.disabledTextColor
                                             Layout.fillWidth: true
