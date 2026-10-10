@@ -173,7 +173,9 @@ Item {
         }
 
         if (!device.serial && device.nativePath) {
-            device.serial = device.nativePath
+            // A Bluetooth device's MAC is the identity more commonly used by
+            // the other providers (BlueZ, Solaar), so prefer it over the path
+            device.serial = device.bluetoothAddress || device.nativePath
         }
 
         if (device.connectionType === root.bluetoothType && device.bluetoothAddress) {

@@ -19,6 +19,10 @@ PlasmoidItem {
         id: upowerProvider
     }
 
+    BluezProvider {
+        id: bluezProvider
+    }
+
     CompanionProvider {
         id: companionProvider
     }
@@ -43,14 +47,11 @@ PlasmoidItem {
         id: solaarProvider
     }
 
-    // List of providers (in priority order). 
-    // Vendor-specific sources come first, since each talks to its own devices 
+    // List of providers (in priority order).
+    // Vendor-specific sources come first, since each talks to its own devices
     // with maintained per-model knowledge
     // The HID helper is the last-resort direct reader.
-    // UPower is last because it is the general API and should be the catch-all.
-    // The HID helper is the last-resort direct reader.
-    // UPower is last because it is the general API and should be the catch-all.
-    property var providers: [companionProvider, openLinkHubProvider, openRazerProvider, kdeConnectProvider, solaarProvider, hidDevicesProvider, upowerProvider]
+    property var providers: [companionProvider, openLinkHubProvider, openRazerProvider, kdeConnectProvider, solaarProvider, hidDevicesProvider, bluezProvider, upowerProvider]
 
     // Debug mode
     property bool debugMode: Plasmoid.configuration.debugMode
@@ -160,6 +161,22 @@ PlasmoidItem {
     // DEVICE MERGING
     // ═══════════════════════════════════════════════════════════════════════
 
+    // One entry per device reported by two providers: the earlier entry stays,
+    // the later one replaces a blocked placeholder or fills missing fields.
+    function mergeDuplicate(winner, later) {
+        if (winner.blocked === true)
+            return later.percentage != null ? later : winner;
+        // A placeholder never replaces data; a multi-battery entry's readings
+        // live in batteries, so percentage and charging have nothing to fill
+        if (later.blocked === true || (winner.batteries && winner.batteries.length > 0))
+            return winner;
+        if (winner.percentage == null && later.percentage != null)
+            winner = Object.assign({}, winner, { percentage: later.percentage });
+        if (winner.charging == null && later.charging != null)
+            winner = Object.assign({}, winner, { charging: later.charging });
+        return winner;
+    }
+
     // Merge devices from multiple providers, avoiding duplicates
     // deviceProviders: array of device arrays in priority order (first = highest priority)
     function mergeDevices(deviceProviders) {
@@ -172,10 +189,14 @@ PlasmoidItem {
             for (var i = 0; i < devices.length; i++) {
                 var device = devices[i];
                 var id = DeviceUtils.deviceIdentity(device);
+                if (!id)
+                    continue;
 
-                if (id && !seenIds[id]) {
+                if (seenIds[id] === undefined) {
                     merged.push(device);
-                    seenIds[id] = true;
+                    seenIds[id] = merged.length - 1;
+                } else {
+                    merged[seenIds[id]] = mergeDuplicate(merged[seenIds[id]], device);
                 }
             }
         }
