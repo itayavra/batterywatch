@@ -1,11 +1,8 @@
 import QtQuick 2.15
-import org.kde.bluezqt as BluezQt
 import org.kde.plasma.plasma5support 2.0 as P5Support
 import org.kde.plasma.plasmoid 2.0
-import "../DeviceUtils.js" as DeviceUtils
 
-// BluezProvider: reads Bluetooth device battery levels directly from BlueZ
-// via the org.kde.bluezqt QML module (BluezQt.Manager).
+// BlueZ device provider.
 //
 // Some Bluetooth devices (e.g. 8bitdo controllers :( )) expose battery info through
 // the Bluetooth GATT Battery Service but NOT through UPower. The system
@@ -14,171 +11,183 @@ import "../DeviceUtils.js" as DeviceUtils
 // This provider is the fix for devices that show 0% in UPower-based providers
 // but report correct battery in the Bluetooth settings panel.
 //
-// SOURCES / REFERENCES:
-// - BluezQt QML API:     https://api.kde.org/frameworks/bluez-qt/html/
-// - BluezQt Device.h      https://invent.kde.org/libraries/bluez-qt/-/blob/master/src/device.h
-//   (enum values for type: Keyboard=8, Mouse=9, Joypad=10, Gamepad=11, etc.)
-// - MBattery (approach):  https://github.com/MCC45TR/Plasma6Widgets/tree/main/battery
-//   (uses the same BluezQt.Manager + dev.battery.percentage pattern)
-// - UPowerProvider.qml:   same-directory reference for bluetoothctl disconnect pattern
-// - KDEConnectProvider:   same-directory reference for config toggle + polling pattern
-// - DeviceUtils.js:       same-directory reference for getIconForType()
-// - main.qml:             mergeDevices() expects the device object shape defined here
 Item {
     id: root
     visible: false
 
-    // Exposed device list consumed by main.qml's mergeDevices()
     property var devices: []
 
-    // Connection type constant matching the existing convention:
     // 0 = wired, 1 = wireless, 2 = bluetooth
     readonly property int bluetoothType: 2
 
-    // Config toggle (default: true, set in main.xml under group "Bluez")
     property bool bluezEnabled: Plasmoid.configuration.enableBluezIntegration
 
-    // Clear or populate devices when the toggle changes
-    onBluezEnabledChanged: {
-        if (!bluezEnabled) {
-            devices = []
-        } else {
-            updateDevices()
-        }
-    }
-
-    // BluezQt.Manager — the singleton that gives us access to all Bluetooth
-    // devices known to BlueZ. Its .devices[] array contains all paired devices;
-    // each has .connected, .battery (with .percentage), .name, .address, .type, etc.
-    // Docs: https://api.kde.org/frameworks/bluez-qt/html/classBluezQt_1_1Manager.html
-    property BluezQt.Manager btManager: BluezQt.Manager
-
-    // Called externally by main.qml's refreshDevices()
     function refresh() {
-        updateDevices()
+        if (!root.bluezEnabled)
+            return
+        listSource.connectSource("bluetoothctl devices Connected")
+        root.devices.forEach(d => {
+            detailsSource.disconnectSource("bluetoothctl info " + d.serial)
+            detailsSource.connectSource("bluetoothctl info " + d.serial)
+        })
     }
 
-    // Core: iterate all BlueZ devices, pick connected ones that expose a
-    // battery percentage >= 0, and build a device object for each.
-    // The device object shape matches what main.qml's mergeDevices() expects
-    // (see: main.qml -> fullRepresentation -> device properties used).
-    function updateDevices() {
-        if (!btManager.operational) {
-            devices = []
+    onBluezEnabledChanged: {
+        if (root.bluezEnabled) {
+            root.refresh()
             return
         }
+        listSource.disconnectSource("bluetoothctl devices Connected")
+        root.devices.forEach(d =>
+            detailsSource.disconnectSource("bluetoothctl info " + d.serial))
+        root.devices = []
+    }
 
-        var newDevices = []
-        for (var i = 0; i < btManager.devices.length; i++) {
-            var dev = btManager.devices[i]
-            if (dev.connected && dev.battery) {
-                var per = dev.battery.percentage
-                if (per >= 0) {
-                    var deviceType = getDeviceType(dev)
-                    newDevices.push({
-                        name: dev.name,
-                        serial: dev.address,              // Bluetooth MAC address — used for dedup in mergeDevices()
-                        icon: DeviceUtils.getIconForType(deviceType),
-                        percentage: per,
-                        charging: false,                   // BlueZ doesn't expose charging state for BT devices
-                        connectionType: bluetoothType,
-                        source: "bluez",
-                        bluetoothAddress: dev.address,
-                        disconnect: makeDisconnect(dev.address),
-                        disconnectTooltip: i18n("Disconnect Bluetooth device")
-                    })
-                }
+    // Parse `bluetoothctl info <address>` output; null when the device is not
+    // connected or reports no battery through the GATT Battery Service.
+    function parseBluezInfo(output, address) {
+        var name = ""
+        var connected = false
+        var percentage = -1
+        var bluezIcon = ""
+
+        var lines = output.split("\n")
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim()
+            if (line.indexOf("Name:") !== -1) {
+                name = line.split(":").slice(1).join(":").trim()
+            } else if (line.indexOf("Connected:") !== -1) {
+                connected = line.split(":")[1].trim() === "yes"
+            } else if (line.indexOf("Battery Percentage:") !== -1) {
+                // "Battery Percentage: 0x50 (80)"; some bluez prints just the decimal
+                var m = line.match(/\((\d+)\)/) || line.match(/Battery Percentage:\s*(\d+)%?$/)
+                if (m)
+                    percentage = parseInt(m[1])
+            } else if (line.indexOf("Icon:") !== -1) {
+                bluezIcon = line.split(":").slice(1).join(":").trim()
             }
         }
-        devices = newDevices
-    }
 
-    // Creates a disconnect closure that runs bluetoothctl with the device's MAC
-    // Same approach as UPowerProvider.qml's disconnect for Bluetooth devices.
-    function makeDisconnect(address) {
-        return function() {
-            disconnectSource.connectSource("bluetoothctl disconnect " + address)
+        if (!connected || percentage < 0)
+            return null
+
+        return {
+            name: name || address,
+            // Bluetooth MAC address - used for dedup in main.qml's mergeDevices()
+            serial: address,
+            // BlueZ icon names are icon-spec names already; pass them through
+            icon: bluezIcon || "battery-symbolic",
+            percentage: percentage,
+            // The GATT Battery Service has no charging flag; null leaves it
+            // unknown so mergeDevices() can fill it from another provider
+            charging: null,
+            connectionType: bluetoothType,
+            source: "bluez",
+            bluetoothAddress: address,
+            disconnect: () => btDisconnectSource.connectSource("bluetoothctl disconnect " + address),
+            disconnectTooltip: i18n("Disconnect device")
         }
     }
 
-    // Maps a BlueZ device to a DeviceUtils-compatible type string.
-    // First tries name keyword matching (catches most devices regardless of
-    // BlueZ classification), then falls back to the numeric BlueZ Device.Type enum.
-    //
-    // Name-matching approach inspired by MBattery's getBluetoothIcon().
-    // Enum values from BluezQt Device.h:
-    // https://invent.kde.org/libraries/bluez-qt/-/blob/master/src/device.h
-    //   1=Phone, 3=Computer, 5=Headset, 6=Headphones, 8=Keyboard, 9=Mouse,
-    //   10=Joypad, 11=Gamepad, 12=Tablet, 17=Display, 18=Wearable, 31=Smartphone,
-    //   32=Laptop, 33=Watch
-    function getDeviceType(dev) {
-        var name = (dev.name || "").toLowerCase()
-
-        if (name.indexOf("gamepad") !== -1 || name.indexOf("controller") !== -1 || name.indexOf("joy") !== -1 || name.indexOf("8bitdo") !== -1)
-            return "gamepad"
-        if (name.indexOf("mouse") !== -1 && name.indexOf("keyboard") === -1)
-            return "mouse"
-        if (name.indexOf("keyboard") !== -1 || name.indexOf("keypad") !== -1)
-            return "keyboard"
-        if (name.indexOf("headset") !== -1)
-            return "headset"
-        if (name.indexOf("headphone") !== -1 || name.indexOf("earphone") !== -1 || name.indexOf("earbud") !== -1)
-            return "headphones"
-        if (name.indexOf("speaker") !== -1)
-            return "headphones"
-        if (name.indexOf("phone") !== -1 || name.indexOf("mobile") !== -1)
-            return "phone"
-        if (name.indexOf("tablet") !== -1 || name.indexOf("ipad") !== -1)
-            return "tablet"
-        if (name.indexOf("watch") !== -1 || name.indexOf("band") !== -1)
-            return "watch"
-        if (name.indexOf("laptop") !== -1 || name.indexOf("notebook") !== -1)
-            return "laptop"
-
-        switch (dev.type) {
-            case 8: return "keyboard"
-            case 9: return "mouse"
-            case 10: case 11: return "gamepad"
-            case 12: return "tablet"
-            case 1: case 31: return "phone"
-            case 5: return "headset"
-            case 6: return "headphones"
-            case 18: case 33: return "watch"
-            case 17: return "display"
-            case 32: return "laptop"
-            case 3: return "computer"
-            default: return "gamepad"
-        }
-    }
-
-    // Executable data source used to run bluetoothctl for disconnect.
-    // Same pattern as UPowerProvider.qml's btDisconnectSource.
     P5Support.DataSource {
-        id: disconnectSource
+        id: btDisconnectSource
         engine: "executable"
         interval: 0
         onNewData: (src, data) => disconnectSource(src)
     }
 
-    // React to BlueZ events in real time rather than only polling.
-    // Same signal-binding pattern as MBattery's DeviceModel.qml.
-    // BluezQt.Manager signals:
-    // https://api.kde.org/frameworks/bluez-qt/html/classBluezQt_1_1Manager.html#signals
-    Connections {
-        target: btManager
-        function onDeviceAdded() { updateDevices() }
-        function onDeviceChanged() { updateDevices() }
-        function onDeviceRemoved() { updateDevices() }
-        function onOperationalChanged() { updateDevices() }
+    P5Support.DataSource {
+        id: listSource
+        engine: "executable"
+        connectedSources: []
+        interval: 0
+
+        onNewData: (sourceName, data) => {
+            disconnectSource(sourceName)
+            if (!root.bluezEnabled) {
+                root.devices = []
+                return
+            }
+
+            // "Device AC:36:1B:D9:FC:38 DualSense Wireless Controller"
+            var lines = data["stdout"].split("\n")
+            var found = []
+
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].trim()
+                if (line.indexOf("Device ") !== 0)
+                    continue
+                var address = line.split(" ")[1]
+                if (!address)
+                    continue
+                found.push(address)
+
+                // Fetch details for unknown devices
+                if (!root.devices.some(d => d.serial === address))
+                    detailsSource.connectSource("bluetoothctl info " + address)
+            }
+
+            // Remove disconnected devices and their detail sources
+            var filtered = root.devices.filter(d => found.indexOf(d.serial) !== -1)
+            if (filtered.length !== root.devices.length) {
+                root.devices.forEach(d => {
+                    if (found.indexOf(d.serial) === -1)
+                        detailsSource.disconnectSource("bluetoothctl info " + d.serial)
+                })
+                root.devices = filtered
+            }
+        }
+
+        Component.onCompleted: if (root.bluezEnabled) connectSource("bluetoothctl devices Connected")
     }
 
-    // Fallback polling timer in case BlueZ events are missed.
-    // Same pattern as KDEConnectProvider.qml's polling Timer.
-    // Interval is read from config (seconds), default 5s.
+    P5Support.DataSource {
+        id: detailsSource
+        engine: "executable"
+        connectedSources: []
+        interval: Plasmoid.configuration.bluezPollingTime * 1000
+
+        onNewData: (sourceName, data) => {
+            if (!root.bluezEnabled) {
+                root.devices = []
+                return
+            }
+            var address = sourceName.split(" ").pop()
+            var info = parseBluezInfo(data["stdout"], address)
+
+            // Not connected, or no battery reported: nothing to show either way
+            if (info === null) {
+                var without = root.devices.filter(d => d.serial !== address)
+                if (without.length !== root.devices.length) {
+                    root.devices = without.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+                }
+                return
+            }
+
+            // Update or add device
+            var updated = false
+            var newDevices = root.devices.map(d => {
+                if (d.serial === address) {
+                    updated = true
+                    return info
+                }
+                return d
+            })
+
+            if (!updated) {
+                newDevices.push(info)
+            }
+
+            root.devices = newDevices.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+        }
+    }
+
+    // Re-list connected devices so new ones get a detail source; the detail
+    // sources poll each device on their own interval
     Timer {
         interval: Plasmoid.configuration.bluezPollingTime * 1000
-        running: true
+        running: root.bluezEnabled
         repeat: true
-        onTriggered: updateDevices()
+        onTriggered: listSource.connectSource("bluetoothctl devices Connected")
     }
 }

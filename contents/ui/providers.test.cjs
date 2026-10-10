@@ -46,8 +46,9 @@ const blockAt = (lines, open, dedent) => {
 // Pull each `onNewData: (src, data) => { ... }` body out of a provider and
 // compile it, so the assertions run the provider's own source. The reply
 // parameter is named differently per provider, so keep the name the file
-// uses; `parseUPowerOutput` and `detailsSource` are the provider methods and
-// DataSource ids the UPower handlers call, and the others ignore them.
+// uses; `parseUPowerOutput` and `parseBluezInfo` are the parse functions the
+// UPower and BlueZ handlers call, `detailsSource` the DataSource id they
+// reach, and the others ignore them.
 function readHandlers(file) {
     const lines = fs.readFileSync(path.join(__dirname, 'providers', file), 'utf8').split('\n');
     const found = [];
@@ -61,7 +62,7 @@ function readHandlers(file) {
             body: text,
             readsReply: text.includes('parseReply'),
             run: new Function(opening[1], 'data', 'root', 'i18n', 'Qt', 'GVariant',
-                'parseUPowerOutput', 'detailsSource',
+                'parseUPowerOutput', 'parseBluezInfo', 'detailsSource',
                 'const disconnectSource = () => {};\n' + text)
         });
     }
@@ -186,7 +187,7 @@ function fire(handler, { reply, src, seed = SEED(), code = 0, stderr = '', root 
     let threw = null;
     try {
         handler.run(src, { ['exit code']: code, stdout: reply, stderr }, root, i18n, Qt, GVariant,
-            parse, sources);
+            parse, parse, sources);
     } catch (error) {
         threw = error;
     }
@@ -500,6 +501,64 @@ test('an unknown level without the ignored marker is kept', () => {
     assert.equal(d.percentage, 89, 'still shown');
 });
 
+test('upower prefers the Bluetooth MAC over the native path as identity', () => {
+    // battery_bluez entries report no serial; their native path carries the
+    // MAC, which is the identity BlueZ and Solaar report the device under.
+    const output = [
+        '  native-path:          bluez:0C_1A_0F_2E_91_62',
+        '  model:                8bitdo Pro 2',
+        '  percentage:           0% (should be ignored)'
+    ].join('\n');
+    const d = parseUpower(output, '/org/freedesktop/UPower/devices/battery_bluez_0C_1A_0F_2E_91_62');
+    assert.equal(d.serial, '0C:1A:0F:2E:91:62');
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// BlueZ output parsing (pure function)
+// ══════════════════════════════════════════════════════════════════════════
+
+const bluez = readFunction('BluezProvider.qml', 'parseBluezInfo');
+const parseBluez = (output, address = '0C:1A:0F:2E:91:62') =>
+    callFunction(bluez, 'parseBluezInfo', 'output, address',
+        { i18n: s => s, bluetoothType: 2 }, output, address);
+
+// Real bluetoothctl info shape, trimmed to the fields the parser reads.
+const BLUEZ_INFO = [
+    'Device 0C:1A:0F:2E:91:62 (public)',
+    '        Name: 8bitdo Pro 2',
+    '        Alias: 8bitdo Pro 2',
+    '        Paired: yes',
+    '        Trusted: yes',
+    '        Connected: yes',
+    '        Modalias: usb:v2DC8p6009d0110',
+    '        Icon: input-gaming',
+    '        Battery Percentage: 0x50 (80)'
+].join('\n');
+
+test('bluez parses a connected device with a battery', () => {
+    const d = parseBluez(BLUEZ_INFO);
+    assert.equal(d.name, '8bitdo Pro 2');
+    assert.equal(d.serial, '0C:1A:0F:2E:91:62');
+    assert.equal(d.percentage, 80);
+    assert.equal(d.charging, null, 'the GATT Battery Service has no charging flag');
+    assert.equal(d.icon, 'input-gaming');
+});
+
+test('bluez parses a plain decimal percentage', () => {
+    // Some bluez prints the decimal without the hex form; a greedy match
+    // here once captured all but the last digit of it.
+    const d = parseBluez(BLUEZ_INFO.replace('0x50 (80)', '80'));
+    assert.equal(d.percentage, 80);
+});
+
+test('bluez drops a device that is no longer connected', () => {
+    assert.equal(parseBluez(BLUEZ_INFO.replace('Connected: yes', 'Connected: no')), null);
+});
+
+test('bluez drops a connected device reporting no battery', () => {
+    assert.equal(parseBluez(BLUEZ_INFO.replace('        Battery Percentage: 0x50 (80)', '')), null);
+});
+
 test('upower removes a device once its battery level goes unknown', () => {
     // The receiver keeps the node enumerated, so the list reply cannot drop
     // it - only the detail reply reveals the device is off.
@@ -634,6 +693,86 @@ test('a detail reply arriving after disabling is discarded', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════
+// BlueZ provider lifecycle (list + detail replies, enable switch)
+// ══════════════════════════════════════════════════════════════════════════
+
+const bluezHandlers = readHandlers('BluezProvider.qml');
+const bluezList = byTag(bluezHandlers, 'found.push');
+const bluezDetails = byTag(bluezHandlers, 'parseBluezInfo');
+
+const BLUEZ_LIST_SRC = 'bluetoothctl devices Connected';
+const BLUEZ_DETAIL_SRC = 'bluetoothctl info 0C:1A:0F:2E:91:62';
+const bluezRoot = (enabled, devices = []) => Object.assign(SEED(), { bluezEnabled: enabled, devices });
+
+test('bluez asks for details of an unknown device while enabled', () => {
+    const connected = [];
+    const sources = { connectSource: src => connected.push(src), disconnectSource() {} };
+    const r = fireOk(bluezList, {
+        reply: 'Device 0C:1A:0F:2E:91:62 8bitdo Pro 2\n',
+        src: BLUEZ_LIST_SRC, root: bluezRoot(true), sources
+    });
+    assert.deepEqual(connected, ['bluetoothctl info 0C:1A:0F:2E:91:62']);
+    assert.deepEqual(r.root.devices, [], 'the list reply adds no devices by itself');
+});
+
+test('bluez drops a device the list no longer reports, with its detail source', () => {
+    const disconnected = [];
+    const sources = { connectSource() {}, disconnectSource: src => disconnected.push(src) };
+    const root = bluezRoot(true, [{ serial: '0C:1A:0F:2E:91:62', name: '8bitdo Pro 2', percentage: 80 }]);
+    const r = fireOk(bluezList, { reply: '', src: BLUEZ_LIST_SRC, root, sources });
+    assert.deepEqual(r.root.devices, [], 'the device stayed after the list dropped it');
+    assert.deepEqual(disconnected, ['bluetoothctl info 0C:1A:0F:2E:91:62']);
+});
+
+test('bluez reads a detail reply into a device while enabled', () => {
+    const r = fireOk(bluezDetails, {
+        reply: BLUEZ_INFO, src: BLUEZ_DETAIL_SRC, root: bluezRoot(true), parse: parseBluez
+    });
+    assert.equal(r.root.devices.length, 1);
+    assert.equal(r.root.devices[0].name, '8bitdo Pro 2');
+    assert.equal(r.root.devices[0].percentage, 80);
+    assert.equal(r.root.devices[0].charging, null);
+});
+
+test('bluez updates a device in place on the next detail reply', () => {
+    const root = bluezRoot(true, []);
+    fireOk(bluezDetails, { reply: BLUEZ_INFO, src: BLUEZ_DETAIL_SRC, root, parse: parseBluez });
+    const r = fireOk(bluezDetails, {
+        reply: BLUEZ_INFO.replace('0x50 (80)', '0x30 (48)'),
+        src: BLUEZ_DETAIL_SRC, root, parse: parseBluez
+    });
+    assert.equal(r.root.devices.length, 1, 'the device duplicated instead of updating');
+    assert.equal(r.root.devices[0].percentage, 48);
+});
+
+test('bluez removes a device once its battery disappears', () => {
+    // Connected but reporting no battery through the GATT Battery Service.
+    const root = bluezRoot(true, [{ serial: '0C:1A:0F:2E:91:62', name: '8bitdo Pro 2', percentage: 80 }]);
+    const r = fireOk(bluezDetails, {
+        reply: BLUEZ_INFO.replace('        Battery Percentage: 0x50 (80)', ''),
+        src: BLUEZ_DETAIL_SRC, root, parse: parseBluez
+    });
+    assert.deepEqual(r.root.devices, [], 'the device stayed without a battery');
+});
+
+test('bluez drops its devices and ignores a list reply once disabled', () => {
+    const root = bluezRoot(false, [{ serial: '0C:1A:0F:2E:91:62', name: '8bitdo Pro 2', percentage: 80 }]);
+    const connected = [];
+    const sources = { connectSource: src => connected.push(src), disconnectSource() {} };
+    const r = fireOk(bluezList, {
+        reply: 'Device 0C:1A:0F:2E:91:62 8bitdo Pro 2\n', src: BLUEZ_LIST_SRC, root, sources
+    });
+    assert.deepEqual(r.root.devices, [], 'devices survived the provider being disabled');
+    assert.deepEqual(connected, [], 'details were requested while disabled');
+});
+
+test('a bluez detail reply arriving after disabling is discarded', () => {
+    const root = bluezRoot(false, [{ serial: '0C:1A:0F:2E:91:62', name: '8bitdo Pro 2' }]);
+    const r = fireOk(bluezDetails, { reply: BLUEZ_INFO, src: BLUEZ_DETAIL_SRC, root, parse: parseBluez });
+    assert.deepEqual(r.root.devices, [], 'a late detail reply re-populated the disabled provider');
+});
+
+// ══════════════════════════════════════════════════════════════════════════
 // Load-time structure
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -660,8 +799,15 @@ test('every provider that uses Plasmoid imports the plasmoid module', () => {
 // ══════════════════════════════════════════════════════════════════════════
 
 const mergeDevices = readFunction('main.qml', 'mergeDevices', '.');
-const merge = (...providers) =>
-    callFunction(mergeDevices, 'mergeDevices', 'deviceProviders', { DeviceUtils }, providers);
+const mergeDuplicate = readFunction('main.qml', 'mergeDuplicate', '.');
+// mergeDevices calls mergeDuplicate for a device two providers reported,
+// so both run in one context.
+const merge = (...providers) => {
+    const context = vm.createContext({ DeviceUtils });
+    vm.runInContext(`function mergeDuplicate(winner, later) {\n${mergeDuplicate}\n}`, context);
+    vm.runInContext(`function mergeDevices(deviceProviders) {\n${mergeDevices}\n}`, context);
+    return context.mergeDevices(providers);
+};
 // Loads the hidden list the way the applet does on startup, from the raw
 // strings Plasmoid.configuration holds.
 // The applet's own loadHiddenDevices, with the assignment it makes to the
@@ -757,4 +903,63 @@ test('deviceIdentity prefers the serial, then the object path', () => {
     assert.equal(DeviceUtils.deviceIdentity({ serial: '', objectPath: '/org/x' }), '/org/x');
     assert.equal(DeviceUtils.deviceIdentity({}), '');
     assert.equal(DeviceUtils.deviceIdentity(null), '');
+});
+
+test('a later provider with a reading replaces a blocked placeholder', () => {
+    // The HID helper finds the device but lacks its udev rule, while UPower
+    // reads it through a kernel driver: the reading replaces the prompt.
+    const blocked = { serial: 'C535', name: 'Keychron M5', blocked: true };
+    const read = { serial: 'C535', name: 'Keychron M5', percentage: 80, charging: false };
+    const merged = merge([blocked], [read]);
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].percentage, 80, 'the prompt stood although a reading existed');
+});
+
+test('a blocked placeholder stands while no later provider has a reading', () => {
+    const blocked = { serial: 'C535', name: 'Keychron M5', blocked: true };
+    const noReading = { serial: 'C535', name: 'Keychron M5' };
+    const merged = merge([blocked], [noReading]);
+    assert.equal(merged[0].blocked, true, 'the prompt was dropped with nothing to replace it');
+});
+
+test('a blocked later entry never replaces real data', () => {
+    const read = { serial: 'C535', name: 'Keychron M5', percentage: 80 };
+    const blocked = { serial: 'C535', name: 'Keychron M5', blocked: true };
+    const merged = merge([read], [blocked]);
+    assert.equal(merged[0].percentage, 80, 'a prompt replaced data');
+});
+
+test('a later provider fills the fields the winner left missing', () => {
+    // BlueZ knows the GATT percentage but not charging; UPower knows both.
+    const bluez = { serial: 'CB6AB26C7347', name: 'MX Master 3', percentage: 100, charging: null };
+    const upower = { serial: 'CB6AB26C7347', name: 'MX Master 3', percentage: 0, charging: true };
+    const merged = merge([bluez], [upower]);
+    assert.equal(merged[0].percentage, 100, 'the winner lost its percentage');
+    assert.equal(merged[0].charging, true, 'the unknown charging was not filled');
+    assert.equal(bluez.charging, null, 'the provider-owned entry was mutated');
+});
+
+test('a later provider cannot override what the winner claims', () => {
+    const winner = { serial: 'C535', name: 'Keychron M5', percentage: 80, charging: false };
+    const later = { serial: 'C535', name: 'Keychron M5', percentage: 20, charging: true };
+    const merged = merge([winner], [later]);
+    assert.equal(merged[0].percentage, 80);
+    assert.equal(merged[0].charging, false);
+});
+
+test('filling one field keeps the fields the winner already has', () => {
+    const winner = { serial: 'C535', name: 'Keychron M5', charging: true };
+    const later = { serial: 'C535', name: 'Keychron M5', percentage: 55 };
+    const merged = merge([winner], [later]);
+    assert.equal(merged[0].percentage, 55);
+    assert.equal(merged[0].charging, true, 'filling a field lost another');
+});
+
+test('a multi-battery entry is not filled with single-battery fields', () => {
+    // The Companion provider reports per-battery readings in batteries.
+    const winner = { serial: 'airpods', name: 'AirPods Pro', batteries: [{ label: 'Left', percentage: 50 }] };
+    const later = { serial: 'airpods', name: 'AirPods Pro', percentage: 42, charging: true };
+    const merged = merge([winner], [later]);
+    assert.equal(merged[0].batteries.length, 1, 'the batteries array was disturbed');
+    assert.equal(merged[0].percentage, undefined);
 });

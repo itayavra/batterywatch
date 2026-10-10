@@ -28,6 +28,7 @@
 | Provider | What it covers |
 |----------|----------------|
 | **UPower** | Bluetooth and wireless peripherals reported by the system - headphones, mice, keyboards, game controllers, and more |
+| **BlueZ** | Fallback for Bluetooth devices that don't publish battery to UPower (e.g. 8bitdo controllers) |
 | **OpenLinkHub** | Corsair and other devices managed by [OpenLinkHub](https://github.com/jurkovic-nikola/OpenLinkHub) |
 | **OpenRazer** | Razer peripherals via [OpenRazer](https://openrazer.github.io/) |
 | **KDE Connect** | Battery levels of paired KDE Connect devices (phones, tablets, etc), with easy unpair action |

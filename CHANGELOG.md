@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **BlueZ integration** — battery percentage of connected Bluetooth devices that report battery to BlueZ but not to UPower (e.g. 8bitdo controllers), read through `bluetoothctl` with a configurable polling interval (default 5s) and a disconnect action. Charging is reported as unknown rather than "not charging", so a provider that knows the state fills it in (contributed by @birrkan)
+
+### Changed
+- **Providers fill each other's gaps** — a device reported by two providers is one entry: the higher-priority reading stays, and the later provider fills what it left missing — a percentage it does not have, or the charging state it cannot know. A permission-blocked entry is replaced as soon as another provider reads the device
+- **Bluetooth devices UPower reports without a serial are now identified by their MAC** — the identity BlueZ and Solaar report them under, so the same device merges into one entry instead of two. A device hidden under its old path-based identity might reappear and would need hiding again due to this change
+
+### Contributors
+- @birrkan — BlueZ integration (initial BluezQt implementation, reworked to bluetoothctl during review)
+
 ## [0.3.2] - 2026-10-05
 
 ### Added

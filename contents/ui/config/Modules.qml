@@ -144,8 +144,7 @@ KCMUtils.SimpleKCM {
 
         Item {
             Kirigami.FormData.isSection: true
-            Kirigami.FormData.label: i18n("Bluez Integration")
-            // Reads Bluetooth device batteries directly from BlueZ (via BluezQt).
+            Kirigami.FormData.label: i18n("BlueZ Integration")
         }
 
         QQL.RowLayout {
@@ -177,7 +176,7 @@ KCMUtils.SimpleKCM {
 
                 QQC2.ToolTip {
                     visible: bluezPollingHelp.hovered
-                    text: i18n("Sets the interval for polling BlueZ device battery updates.\nBlueZ also pushes updates via signals, so this is a safety net.")
+                    text: i18n("Sets the interval for polling BlueZ for the battery updates of connected devices.")
                 }
             }
         }

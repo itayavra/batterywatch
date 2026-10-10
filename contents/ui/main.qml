@@ -21,9 +21,6 @@ PlasmoidItem {
 
     BluezProvider {
         id: bluezProvider
-        // Reads Bluetooth device batteries directly from BlueZ (via BluezQt).
-        // the Bluetooth GATT Battery Service but not through UPower.
-        // Placed after UPowerProvider so its data can override 0% UPower entries
     }
 
     CompanionProvider {
@@ -54,9 +51,6 @@ PlasmoidItem {
     // Vendor-specific sources come first, since each talks to its own devices
     // with maintained per-model knowledge
     // The HID helper is the last-resort direct reader.
-    // UPower is last because it is the general API and should be the catch-all.
-    // The HID helper is the last-resort direct reader.
-    // UPower is last because it is the general API and should be the catch-all.
     property var providers: [companionProvider, openLinkHubProvider, openRazerProvider, kdeConnectProvider, solaarProvider, hidDevicesProvider, bluezProvider, upowerProvider]
 
     // Debug mode
@@ -167,6 +161,22 @@ PlasmoidItem {
     // DEVICE MERGING
     // ═══════════════════════════════════════════════════════════════════════
 
+    // One entry per device reported by two providers: the earlier entry stays,
+    // the later one replaces a blocked placeholder or fills missing fields.
+    function mergeDuplicate(winner, later) {
+        if (winner.blocked === true)
+            return later.percentage != null ? later : winner;
+        // A placeholder never replaces data; a multi-battery entry's readings
+        // live in batteries, so percentage and charging have nothing to fill
+        if (later.blocked === true || (winner.batteries && winner.batteries.length > 0))
+            return winner;
+        if (winner.percentage == null && later.percentage != null)
+            winner = Object.assign({}, winner, { percentage: later.percentage });
+        if (winner.charging == null && later.charging != null)
+            winner = Object.assign({}, winner, { charging: later.charging });
+        return winner;
+    }
+
     // Merge devices from multiple providers, avoiding duplicates
     // deviceProviders: array of device arrays in priority order (first = highest priority)
     function mergeDevices(deviceProviders) {
@@ -179,23 +189,14 @@ PlasmoidItem {
             for (var i = 0; i < devices.length; i++) {
                 var device = devices[i];
                 var id = DeviceUtils.deviceIdentity(device);
+                if (!id)
+                    continue;
 
-                if (id) {
-                    var existing = seenIds[id];
-                    if (existing === undefined) {
-                        merged.push(device);
-                        seenIds[id] = merged.length - 1;
-                    } else {
-                        var existingDevice = merged[existing];
-                        // When two providers report the same device, keep the
-                        // one with a valid >0% battery and discard the 0% entry.
-                        // This way BluezProvider's correct percentage replaces
-                        // UPowerProvider's 0%
-                        if ((existingDevice.percentage === undefined || existingDevice.percentage <= 0) &&
-                            device.percentage > 0) {
-                            merged[existing] = device;
-                        }
-                    }
+                if (seenIds[id] === undefined) {
+                    merged.push(device);
+                    seenIds[id] = merged.length - 1;
+                } else {
+                    merged[seenIds[id]] = mergeDuplicate(merged[seenIds[id]], device);
                 }
             }
         }
