@@ -34,6 +34,7 @@
 | **KDE Connect** | Battery levels of paired KDE Connect devices (phones, tablets, etc), with easy unpair action |
 | **HID Devices** | Peripherals read directly via Linux HID (currently supports Steam Controller 2, Keychron M5, ROG Azoth, and Razer Barracuda X Chroma) |
 | **Solaar** (experimental) | Logitech HID++ peripherals via [Solaar](https://github.com/pwr-Solaar/Solaar) - only tested on a few devices, so feedback is welcome |
+| **HeadsetControl** | Compatible wireless headsets supported by [HeadsetControl](https://github.com/Sapd/HeadsetControl), with battery levels obtained through its command-line JSON output. Requires HeadsetControl to be installed and the headset to be supported by it. |
 
 
 ## Installation
