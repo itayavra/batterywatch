@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-08-18 00:23+0200\n"
+"POT-Creation-Date: 2026-10-10 12:34+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -154,11 +154,15 @@ msgid "Zone 2"
 msgstr ""
 
 #: ../contents/ui/config/Modules.qml
-msgid "OpenLinkHub Integration"
+msgid "UPower Integration"
 msgstr ""
 
 #: ../contents/ui/config/Modules.qml
 msgid "Enable"
+msgstr ""
+
+#: ../contents/ui/config/Modules.qml
+msgid "OpenLinkHub Integration"
 msgstr ""
 
 #: ../contents/ui/config/Modules.qml
@@ -190,6 +194,14 @@ msgid "Sets the interval for KDE Connect device state updates."
 msgstr ""
 
 #: ../contents/ui/config/Modules.qml
+msgid "BlueZ Integration"
+msgstr ""
+
+#: ../contents/ui/config/Modules.qml
+msgid "Sets the interval for polling BlueZ for the battery updates of connected devices."
+msgstr ""
+
+#: ../contents/ui/config/Modules.qml
 msgid "HID Devices Integration"
 msgstr ""
 
@@ -197,6 +209,16 @@ msgstr ""
 msgid ""
 "Sets the interval for re-checking HID devices when none are connected.\n"
 "When a device is active, it updates automatically."
+msgstr ""
+
+#: ../contents/ui/config/Modules.qml
+msgid "Solaar Integration"
+msgstr ""
+
+#: ../contents/ui/config/Modules.qml
+msgid ""
+"Sets the interval for Solaar device state updates.\n"
+"Requires Solaar to be installed; Logitech devices only."
 msgstr ""
 
 #. i18n: %1 is the version number.
@@ -252,6 +274,7 @@ msgid "Refresh devices"
 msgstr ""
 
 #: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/HIDDevicesProvider.qml ../contents/ui/providers/OpenLinkHubProvider.qml
+#: ../contents/ui/providers/SolaarProvider.qml
 msgid "Unknown Device"
 msgstr ""
 
@@ -273,7 +296,8 @@ msgstr ""
 msgid "Disconnect"
 msgstr ""
 
-#: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/UPowerProvider.qml
+#: ../contents/ui/main.qml ../contents/ui/providers/BluezProvider.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/SolaarProvider.qml
+#: ../contents/ui/providers/UPowerProvider.qml
 msgid "Disconnect device"
 msgstr ""
 
@@ -336,6 +360,10 @@ msgstr ""
 
 #: ../contents/ui/providers/KDEConnectProvider.qml
 msgid "BatteryWatch: KDE Connect daemon unavailable"
+msgstr ""
+
+#: ../contents/ui/providers/KDEConnectProvider.qml
+msgid "BatteryWatch: unreadable KDE Connect reply (%1)"
 msgstr ""
 
 #: ../contents/ui/providers/KDEConnectProvider.qml
@@ -419,6 +447,20 @@ msgstr ""
 
 #: ../contents/ui/providers/OpenRazerProvider.qml
 msgid "Unknown Razer Device"
+msgstr ""
+
+#. i18n: %1 is the error message of the D-Bus call.
+#: ../contents/ui/providers/OpenRazerProvider.qml
+msgid "BatteryWatch: OpenRazer daemon unavailable (%1)"
+msgstr ""
+
+#: ../contents/ui/providers/OpenRazerProvider.qml
+msgid "BatteryWatch: unreadable OpenRazer reply (%1)"
+msgstr ""
+
+#. i18n: %1 is the helper's hint why Solaar is unusable.
+#: ../contents/ui/providers/SolaarProvider.qml
+msgid "BatteryWatch: Solaar library unavailable (%1)"
 msgstr ""
 
 #. i18n: Used when a device is known by BatteryWatch to be misreported by UPower.

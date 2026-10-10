@@ -137,6 +137,10 @@ echo "$statusHeader" > "./Status.md"
 echo "$statusDivider" >> "./Status.md"
 entryFormat="| %-6s | %-12s | %-12s | %6s |"
 
+# English is the source language, so list it first
+englishLine=`perl -e "printf(\"$entryFormat\", \"en\", \"English\", \"✅ Source\", \"100%\")"`
+echo "$englishLine" >> "./Status.md"
+
 rm "${DIR}/infiles.list"
 echoGray "[translate/merge] Done extracting messages"
 
@@ -188,6 +192,7 @@ for cat in $catalogs; do
 		# Fallback to a few known ones or just use the locale capitalized
 		case "$catLocale" in
 			cs) langName="Czech" ;;
+			de) langName="German" ;;
 			he) langName="Hebrew" ;;
 			hu) langName="Hungarian" ;;
 			nl) langName="Dutch" ;;
@@ -196,6 +201,9 @@ for cat in $catalogs; do
 			*) langName=$(echo "$catLocale" | awk '{print toupper(substr($0,1,1))tolower(substr($0,2))}') ;;
 		esac
 	fi
+
+	# Normalize capitalization of the language name from the PO header
+	langName=$(echo "$langName" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
 
 	statusIcon="🟡 In Progress"
 	if [ "$poCompletion" -eq 100 ]; then

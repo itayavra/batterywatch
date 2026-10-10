@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-08-18 00:23+0200\n"
+"POT-Creation-Date: 2026-10-10 12:34+0300\n"
 "PO-Revision-Date: 2026-03-24 23:56+0100\n"
 "Last-Translator: Levente Pál Szíjártó <szijartoleventepal@gmail.com>\n"
 "Language-Team: hu\n"
@@ -163,12 +163,16 @@ msgid "Zone 2"
 msgstr "2. zóna"
 
 #: ../contents/ui/config/Modules.qml
-msgid "OpenLinkHub Integration"
-msgstr "OpenLinkHub-integráció"
+msgid "UPower Integration"
+msgstr "UPower-integráció"
 
 #: ../contents/ui/config/Modules.qml
 msgid "Enable"
 msgstr "Engedélyezés"
+
+#: ../contents/ui/config/Modules.qml
+msgid "OpenLinkHub Integration"
+msgstr "OpenLinkHub-integráció"
 
 #: ../contents/ui/config/Modules.qml
 msgid "Port: "
@@ -199,6 +203,18 @@ msgid "Sets the interval for KDE Connect device state updates."
 msgstr "Beállítja a KDE Connect eszközállapot-frissítések időközét."
 
 #: ../contents/ui/config/Modules.qml
+msgid "BlueZ Integration"
+msgstr "BlueZ-integráció"
+
+#: ../contents/ui/config/Modules.qml
+msgid ""
+"Sets the interval for polling BlueZ for the battery updates of connected "
+"devices."
+msgstr ""
+"Beállítja a BlueZ lekérdezéseinek időközét a csatlakoztatott eszközök "
+"akkumulátor-frissítéseihez."
+
+#: ../contents/ui/config/Modules.qml
 msgid "HID Devices Integration"
 msgstr "HID-eszközök integrációja"
 
@@ -211,6 +227,18 @@ msgstr ""
 "csatlakoztatva.\n"
 "Aktív eszköz esetén a frissítés automatikusan történik."
 
+#: ../contents/ui/config/Modules.qml
+msgid "Solaar Integration"
+msgstr "Solaar-integráció"
+
+#: ../contents/ui/config/Modules.qml
+msgid ""
+"Sets the interval for Solaar device state updates.\n"
+"Requires Solaar to be installed; Logitech devices only."
+msgstr ""
+"Beállítja a Solaar eszközállapot-frissítések időközét.\n"
+"A Solaar telepítését igényli; csak Logitech-eszközök."
+
 #. i18n: %1 is the version number.
 #: ../contents/ui/main.qml
 msgid "BatteryWatch v%1"
@@ -222,7 +250,7 @@ msgstr "Nincsenek csatlakoztatott eszközök"
 
 #: ../contents/ui/main.qml
 msgid "%1 - permission needed"
-msgstr ""
+msgstr "%1 - engedély szükséges"
 
 #. i18n: %1 can be the device name or, in the case of multiple batteries, the battery label,
 #. or simply the word, ‘Battery’. %2 is the charge percentage value.
@@ -266,12 +294,13 @@ msgstr "Eszközlista frissítése"
 #: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml
 #: ../contents/ui/providers/HIDDevicesProvider.qml
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
+#: ../contents/ui/providers/SolaarProvider.qml
 msgid "Unknown Device"
 msgstr "Ismeretlen eszköz"
 
 #: ../contents/ui/main.qml
 msgid "Permission needed - run the command in a terminal"
-msgstr ""
+msgstr "Engedély szükséges - futtassa a parancsot egy terminálban"
 
 #: ../contents/ui/main.qml
 msgid "Battery"
@@ -287,7 +316,9 @@ msgstr "%1: <span style=\"color:%4\">%2%</span>%3"
 msgid "Disconnect"
 msgstr "Leválasztás"
 
-#: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml
+#: ../contents/ui/main.qml ../contents/ui/providers/BluezProvider.qml
+#: ../contents/ui/providers/CompanionProvider.qml
+#: ../contents/ui/providers/SolaarProvider.qml
 #: ../contents/ui/providers/UPowerProvider.qml
 msgid "Disconnect device"
 msgstr "Eszköz leválasztása"
@@ -310,19 +341,19 @@ msgstr "Megjelenítés a paneltálcán"
 
 #: ../contents/ui/main.qml
 msgid "Copied!"
-msgstr ""
+msgstr "Kimásolva!"
 
 #: ../contents/ui/main.qml
 msgid "Copy command"
-msgstr ""
+msgstr "Parancs másolása"
 
 #: ../contents/ui/main.qml
 msgid "Copied to clipboard"
-msgstr ""
+msgstr "Vágólapra másolva"
 
 #: ../contents/ui/main.qml
 msgid "Copy the command to run in a terminal"
-msgstr ""
+msgstr "A terminálban futtatható parancs másolása"
 
 #. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
 #: ../contents/ui/main.qml
@@ -354,6 +385,10 @@ msgstr "KDE Connect-eszköz párosításának megszüntetése"
 #: ../contents/ui/providers/KDEConnectProvider.qml
 msgid "BatteryWatch: KDE Connect daemon unavailable"
 msgstr "BatteryWatch: A KDE Connect-szolgáltatás nem érhető el"
+
+#: ../contents/ui/providers/KDEConnectProvider.qml
+msgid "BatteryWatch: unreadable KDE Connect reply (%1)"
+msgstr "BatteryWatch: olvashatatlan KDE Connect-válasz (%1)"
 
 #: ../contents/ui/providers/KDEConnectProvider.qml
 msgid "BatteryWatch: KDE Connect daemon connected"
@@ -440,6 +475,20 @@ msgstr "A(z) „%1” eszköz adatainak lekérése közben kiszolgálóhiba tör
 #: ../contents/ui/providers/OpenRazerProvider.qml
 msgid "Unknown Razer Device"
 msgstr "Ismeretlen Razer-eszköz"
+
+#. i18n: %1 is the error message of the D-Bus call.
+#: ../contents/ui/providers/OpenRazerProvider.qml
+msgid "BatteryWatch: OpenRazer daemon unavailable (%1)"
+msgstr "BatteryWatch: az OpenRazer démon nem érhető el (%1)"
+
+#: ../contents/ui/providers/OpenRazerProvider.qml
+msgid "BatteryWatch: unreadable OpenRazer reply (%1)"
+msgstr "BatteryWatch: olvashatatlan OpenRazer-válasz (%1)"
+
+#. i18n: %1 is the helper's hint why Solaar is unusable.
+#: ../contents/ui/providers/SolaarProvider.qml
+msgid "BatteryWatch: Solaar library unavailable (%1)"
+msgstr "BatteryWatch: a Solaar-könyvtár nem érhető el (%1)"
 
 #. i18n: Used when a device is known by BatteryWatch to be misreported by UPower.
 #. %1 is the device's model name. %2 is the erroneously reported device type (e.g.: ‘mouse’).

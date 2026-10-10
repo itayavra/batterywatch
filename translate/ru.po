@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-08-18 00:23+0200\n"
+"POT-Creation-Date: 2026-10-10 12:34+0300\n"
 "PO-Revision-Date: 2026-05-18 02:44+0300\n"
 "Last-Translator: dev <dd3v@altmails.com>\n"
 "Language-Team: Russian <gnu@d07.ru>\n"
@@ -160,12 +160,16 @@ msgid "Zone 2"
 msgstr "Зона 2"
 
 #: ../contents/ui/config/Modules.qml
-msgid "OpenLinkHub Integration"
-msgstr "Интеграция с OpenLinkHub"
+msgid "UPower Integration"
+msgstr "Интеграция с UPower"
 
 #: ../contents/ui/config/Modules.qml
 msgid "Enable"
 msgstr "Включить"
+
+#: ../contents/ui/config/Modules.qml
+msgid "OpenLinkHub Integration"
+msgstr "Интеграция с OpenLinkHub"
 
 #: ../contents/ui/config/Modules.qml
 msgid "Port: "
@@ -196,6 +200,14 @@ msgid "Sets the interval for KDE Connect device state updates."
 msgstr "Устанавливает интервал обновления состояния устройств KDE Connect."
 
 #: ../contents/ui/config/Modules.qml
+msgid "BlueZ Integration"
+msgstr "Интеграция с BlueZ"
+
+#: ../contents/ui/config/Modules.qml
+msgid "Sets the interval for polling BlueZ for the battery updates of connected devices."
+msgstr "Устанавливает интервал опроса BlueZ для обновлений уровня заряда подключённых устройств."
+
+#: ../contents/ui/config/Modules.qml
 msgid "HID Devices Integration"
 msgstr "Интеграция HID-устройств"
 
@@ -206,6 +218,18 @@ msgid ""
 msgstr ""
 "Задаёт интервал проверки HID-устройств, когда ни одно не подключено.\n"
 "При активном устройстве обновление происходит автоматически."
+
+#: ../contents/ui/config/Modules.qml
+msgid "Solaar Integration"
+msgstr "Интеграция с Solaar"
+
+#: ../contents/ui/config/Modules.qml
+msgid ""
+"Sets the interval for Solaar device state updates.\n"
+"Requires Solaar to be installed; Logitech devices only."
+msgstr ""
+"Устанавливает интервал обновления состояния устройств Solaar.\n"
+"Требуется установленный Solaar; только устройства Logitech."
 
 #. i18n: %1 is the version number.
 #: ../contents/ui/main.qml
@@ -218,7 +242,7 @@ msgstr "Нет подключённых устройств"
 
 #: ../contents/ui/main.qml
 msgid "%1 - permission needed"
-msgstr ""
+msgstr "%1 - требуется разрешение"
 
 #. i18n: %1 can be the device name or, in the case of multiple batteries, the battery label,
 #. or simply the word, ‘Battery’. %2 is the charge percentage value.
@@ -259,13 +283,13 @@ msgstr "Обновить"
 msgid "Refresh devices"
 msgstr "Обновить устройства"
 
-#: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/HIDDevicesProvider.qml ../contents/ui/providers/OpenLinkHubProvider.qml
+#: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/HIDDevicesProvider.qml ../contents/ui/providers/OpenLinkHubProvider.qml ../contents/ui/providers/SolaarProvider.qml
 msgid "Unknown Device"
 msgstr "Неизвестное устройство"
 
 #: ../contents/ui/main.qml
 msgid "Permission needed - run the command in a terminal"
-msgstr ""
+msgstr "Требуется разрешение - выполните команду в терминале"
 
 #: ../contents/ui/main.qml
 msgid "Battery"
@@ -281,7 +305,7 @@ msgstr "%1: <span style=\"color:%4\">%2%</span>%3"
 msgid "Disconnect"
 msgstr "Отключить"
 
-#: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/UPowerProvider.qml
+#: ../contents/ui/main.qml ../contents/ui/providers/BluezProvider.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/SolaarProvider.qml ../contents/ui/providers/UPowerProvider.qml
 msgid "Disconnect device"
 msgstr "Отключить устройство"
 
@@ -303,19 +327,19 @@ msgstr "Показать в системном лотке"
 
 #: ../contents/ui/main.qml
 msgid "Copied!"
-msgstr ""
+msgstr "Скопировано!"
 
 #: ../contents/ui/main.qml
 msgid "Copy command"
-msgstr ""
+msgstr "Скопировать команду"
 
 #: ../contents/ui/main.qml
 msgid "Copied to clipboard"
-msgstr ""
+msgstr "Скопировано в буфер обмена"
 
 #: ../contents/ui/main.qml
 msgid "Copy the command to run in a terminal"
-msgstr ""
+msgstr "Скопировать команду для запуска в терминале"
 
 #. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
 #: ../contents/ui/main.qml
@@ -345,6 +369,10 @@ msgstr "Отвязать устройство KDE Connect"
 #: ../contents/ui/providers/KDEConnectProvider.qml
 msgid "BatteryWatch: KDE Connect daemon unavailable"
 msgstr "BatteryWatch: служба KDE Connect недоступна"
+
+#: ../contents/ui/providers/KDEConnectProvider.qml
+msgid "BatteryWatch: unreadable KDE Connect reply (%1)"
+msgstr "BatteryWatch: нечитаемый ответ KDE Connect (%1)"
 
 #: ../contents/ui/providers/KDEConnectProvider.qml
 msgid "BatteryWatch: KDE Connect daemon connected"
@@ -428,6 +456,20 @@ msgstr "Ошибка сервера при получении устройств
 #: ../contents/ui/providers/OpenRazerProvider.qml
 msgid "Unknown Razer Device"
 msgstr "Неизвестное устройство Razer"
+
+#. i18n: %1 is the error message of the D-Bus call.
+#: ../contents/ui/providers/OpenRazerProvider.qml
+msgid "BatteryWatch: OpenRazer daemon unavailable (%1)"
+msgstr "BatteryWatch: демон OpenRazer недоступен (%1)"
+
+#: ../contents/ui/providers/OpenRazerProvider.qml
+msgid "BatteryWatch: unreadable OpenRazer reply (%1)"
+msgstr "BatteryWatch: нечитаемый ответ OpenRazer (%1)"
+
+#. i18n: %1 is the helper's hint why Solaar is unusable.
+#: ../contents/ui/providers/SolaarProvider.qml
+msgid "BatteryWatch: Solaar library unavailable (%1)"
+msgstr "BatteryWatch: библиотека Solaar недоступна (%1)"
 
 #. i18n: Used when a device is known by BatteryWatch to be misreported by UPower.
 #. %1 is the device's model name. %2 is the erroneously reported device type (e.g.: ‘mouse’).

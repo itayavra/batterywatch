@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-08-18 00:23+0200\n"
+"POT-Creation-Date: 2026-10-10 12:34+0300\n"
 "PO-Revision-Date: 2026-05-18 17:22+2\n"
 "Last-Translator: TheDogORB <thedogorb@proton.me> \n"
 "Language-Team: \n"
@@ -158,12 +158,16 @@ msgid "Zone 2"
 msgstr "Zóna 2"
 
 #: ../contents/ui/config/Modules.qml
-msgid "OpenLinkHub Integration"
-msgstr "OpenLinkHub Integrace"
+msgid "UPower Integration"
+msgstr "UPower Integrace"
 
 #: ../contents/ui/config/Modules.qml
 msgid "Enable"
 msgstr "Povolit"
+
+#: ../contents/ui/config/Modules.qml
+msgid "OpenLinkHub Integration"
+msgstr "OpenLinkHub Integrace"
 
 #: ../contents/ui/config/Modules.qml
 msgid "Port: "
@@ -194,6 +198,14 @@ msgid "Sets the interval for KDE Connect device state updates."
 msgstr "Nastaví interval aktualizací stavu KDE Connect zařízení."
 
 #: ../contents/ui/config/Modules.qml
+msgid "BlueZ Integration"
+msgstr "BlueZ Integrace"
+
+#: ../contents/ui/config/Modules.qml
+msgid "Sets the interval for polling BlueZ for the battery updates of connected devices."
+msgstr "Nastaví interval dotazování BlueZ na aktualizace stavu baterie připojených zařízení."
+
+#: ../contents/ui/config/Modules.qml
 msgid "HID Devices Integration"
 msgstr "Integrace HID zařízení"
 
@@ -204,6 +216,18 @@ msgid ""
 msgstr ""
 "Určuje interval kontroly HID zařízení, pokud žádné není připojeno.\n"
 "U aktivního zařízení probíhá aktualizace automaticky."
+
+#: ../contents/ui/config/Modules.qml
+msgid "Solaar Integration"
+msgstr "Solaar Integrace"
+
+#: ../contents/ui/config/Modules.qml
+msgid ""
+"Sets the interval for Solaar device state updates.\n"
+"Requires Solaar to be installed; Logitech devices only."
+msgstr ""
+"Nastaví interval aktualizací stavu zařízení Solaar.\n"
+"Vyžaduje nainstalovaný Solaar; pouze zařízení Logitech."
 
 #. i18n: %1 is the version number.
 #: ../contents/ui/main.qml
@@ -216,7 +240,7 @@ msgstr "Žádná připojená zařízení"
 
 #: ../contents/ui/main.qml
 msgid "%1 - permission needed"
-msgstr ""
+msgstr "%1 - vyžadováno oprávnění"
 
 #. i18n: %1 can be the device name or, in the case of multiple batteries, the battery label,
 #. or simply the word, ‘Battery’. %2 is the charge percentage value.
@@ -257,13 +281,13 @@ msgstr "Obnov"
 msgid "Refresh devices"
 msgstr "Obnov zařízení"
 
-#: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/HIDDevicesProvider.qml ../contents/ui/providers/OpenLinkHubProvider.qml
+#: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/HIDDevicesProvider.qml ../contents/ui/providers/OpenLinkHubProvider.qml ../contents/ui/providers/SolaarProvider.qml
 msgid "Unknown Device"
 msgstr "Neznámé Zařízení"
 
 #: ../contents/ui/main.qml
 msgid "Permission needed - run the command in a terminal"
-msgstr ""
+msgstr "Vyžadováno oprávnění - spusťte příkaz v terminálu"
 
 #: ../contents/ui/main.qml
 msgid "Battery"
@@ -279,7 +303,7 @@ msgstr "%1: <span style=\"color:%4\">%2%</span>%3"
 msgid "Disconnect"
 msgstr "Odpoj"
 
-#: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/UPowerProvider.qml
+#: ../contents/ui/main.qml ../contents/ui/providers/BluezProvider.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/SolaarProvider.qml ../contents/ui/providers/UPowerProvider.qml
 msgid "Disconnect device"
 msgstr "Odpoj zařízení"
 
@@ -301,19 +325,19 @@ msgstr "Zobraz v liště"
 
 #: ../contents/ui/main.qml
 msgid "Copied!"
-msgstr ""
+msgstr "Zkopírováno!"
 
 #: ../contents/ui/main.qml
 msgid "Copy command"
-msgstr ""
+msgstr "Zkopírovat příkaz"
 
 #: ../contents/ui/main.qml
 msgid "Copied to clipboard"
-msgstr ""
+msgstr "Zkopírováno do schránky"
 
 #: ../contents/ui/main.qml
 msgid "Copy the command to run in a terminal"
-msgstr ""
+msgstr "Zkopírovat příkaz ke spuštění v terminálu"
 
 #. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
 #: ../contents/ui/main.qml
@@ -343,6 +367,10 @@ msgstr "Odpárovat KDE Connect zařízení"
 #: ../contents/ui/providers/KDEConnectProvider.qml
 msgid "BatteryWatch: KDE Connect daemon unavailable"
 msgstr "BatteryWatch: KDE Connect daemon není dostupný"
+
+#: ../contents/ui/providers/KDEConnectProvider.qml
+msgid "BatteryWatch: unreadable KDE Connect reply (%1)"
+msgstr "BatteryWatch: nečitelná odpověď KDE Connect (%1)"
 
 #: ../contents/ui/providers/KDEConnectProvider.qml
 msgid "BatteryWatch: KDE Connect daemon connected"
@@ -426,6 +454,20 @@ msgstr "Chyba serveru při načítání zařízení '%1':"
 #: ../contents/ui/providers/OpenRazerProvider.qml
 msgid "Unknown Razer Device"
 msgstr "Neznámé Razer Zařízení"
+
+#. i18n: %1 is the error message of the D-Bus call.
+#: ../contents/ui/providers/OpenRazerProvider.qml
+msgid "BatteryWatch: OpenRazer daemon unavailable (%1)"
+msgstr "BatteryWatch: démon OpenRazer je nedostupný (%1)"
+
+#: ../contents/ui/providers/OpenRazerProvider.qml
+msgid "BatteryWatch: unreadable OpenRazer reply (%1)"
+msgstr "BatteryWatch: nečitelná odpověď OpenRazer (%1)"
+
+#. i18n: %1 is the helper's hint why Solaar is unusable.
+#: ../contents/ui/providers/SolaarProvider.qml
+msgid "BatteryWatch: Solaar library unavailable (%1)"
+msgstr "BatteryWatch: knihovna Solaar je nedostupná (%1)"
 
 #. i18n: Used when a device is known by BatteryWatch to be misreported by UPower.
 #. %1 is the device's model name. %2 is the erroneously reported device type (e.g.: ‘mouse’).
