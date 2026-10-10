@@ -8,17 +8,21 @@ Item {
     visible: false
 
     property bool headsetControlEnabled: Plasmoid.configuration.enableHeadsetControlIntegration
-
     property int pollingTime: Plasmoid.configuration.headsetControlPollingTime
 
-    readonly property string command: "/usr/bin/headsetcontrol -b -o json"
+    readonly property string command: "headsetcontrol -b -o json"
     readonly property int wirelessType: 1
 
     property var devices: []
 
+    // Match SolaarProvider.qml's failure backoff and logging behavior.
+    property int failureBackoff: 1
+    property bool headsetControlUnavailable: false
+
     function refresh() {
         if (!root.headsetControlEnabled)
             return;
+
         pollSource.disconnectSource(command);
         pollSource.connectSource(command);
     }
@@ -26,35 +30,55 @@ Item {
     function parseDevices(output) {
         const parsed = JSON.parse(output);
 
-        if (!parsed.devices || !Array.isArray(parsed.devices)) {
-            devices = [];
-            return;
-        }
+        if (!parsed.devices || !Array.isArray(parsed.devices))
+            throw new Error("Missing or invalid devices array");
 
-        devices = parsed.devices.filter(d => d.status === "success" && d.battery && typeof d.battery.level === "number" && d.battery.level >= 0 && d.battery.level <= 100).map(d => ({
-                    name: d.device || d.product || "Gaming Headset",
-                    serial: "headsetcontrol-" + (d.id_vendor || "") + ":" + (d.id_product || ""),
-                    percentage: d.battery.level,
-                    charging: false,
-                    blocked: false,
-                    type: "headset",
-                    icon: DeviceUtils.getIconForType("headset"),
-                    connectionType: wirelessType,
-                    source: "headsetcontrol",
-                    batteries: []
-                }));
+        root.devices = parsed.devices.filter(d => {
+            if (!d || (d.status !== "success" && d.status !== "partial") || !d.battery)
+                return false;
 
-        console.info("BatteryWatch HeadsetControl: found", devices.length, "device(s)");
+            const level = d.battery.level;
+            const hasValidLevel = typeof level === "number" && level >= 0 && level <= 100;
+            const isCharging = d.battery.status === "BATTERY_CHARGING";
+
+            // Some headsets report -1 while charging.
+            return hasValidLevel || isCharging;
+        }).map(d => {
+            const level = d.battery.level;
+            const hasValidLevel = typeof level === "number" && level >= 0 && level <= 100;
+
+            return {
+                name: d.device || d.product || i18n("Unknown Device"),
+                serial: (d.id_vendor || "") + ":" + (d.id_product || ""),
+                percentage: hasValidLevel ? level : null,
+                charging: d.battery.status === "BATTERY_CHARGING" ? true : d.battery.status === "BATTERY_AVAILABLE" ? false : null,
+                blocked: false,
+                type: "headset",
+                icon: DeviceUtils.getIconForType("headset"),
+                connectionType: wirelessType,
+                source: "headsetcontrol",
+                batteries: []
+            };
+        });
     }
 
     onHeadsetControlEnabledChanged: {
         if (root.headsetControlEnabled) {
+            root.failureBackoff = 1;
+            root.headsetControlUnavailable = false;
             root.refresh();
         } else {
             pollSource.disconnectSource(command);
             retryTimer.stop();
             root.devices = [];
+            root.failureBackoff = 1;
+            root.headsetControlUnavailable = false;
         }
+    }
+
+    onPollingTimeChanged: {
+        if (root.headsetControlEnabled)
+            retryTimer.restart();
     }
 
     P5Support.DataSource {
@@ -68,22 +92,38 @@ Item {
 
             if (!root.headsetControlEnabled)
                 return;
+
             const exitCode = data["exit code"];
             const stdout = data["stdout"] || "";
             const stderr = data["stderr"] || "";
 
-            if (exitCode !== 0 || !stdout.trim()) {
-                console.warn("BatteryWatch HeadsetControl: command failed; exit code:", exitCode, "stderr:", stderr);
+            let parsedSuccessfully = false;
+
+            // A non-zero exit code can still accompany valid JSON, including
+            // an empty devices array. The JSON payload determines success.
+            if (stdout.trim()) {
+                try {
+                    root.parseDevices(stdout.trim());
+                    parsedSuccessfully = true;
+                } catch (e) {
+                    root.devices = [];
+                    if (Plasmoid.configuration.debugMode)
+                        console.warn("BatteryWatch HeadsetControl: invalid JSON:", e);
+                }
+            } else {
                 root.devices = [];
-                retryTimer.restart();
-                return;
             }
 
-            try {
-                root.parseDevices(stdout.trim());
-            } catch (e) {
-                console.warn("BatteryWatch HeadsetControl: JSON parsing failed:", e);
-                root.devices = [];
+            if (parsedSuccessfully) {
+                root.failureBackoff = 1;
+                root.headsetControlUnavailable = false;
+            } else {
+                root.failureBackoff = 6;
+
+                if (!root.headsetControlUnavailable) {
+                    console.warn("BatteryWatch HeadsetControl: command failed or returned invalid JSON; exit code:", exitCode, "stderr:", stderr);
+                    root.headsetControlUnavailable = true;
+                }
             }
 
             retryTimer.restart();
@@ -97,7 +137,7 @@ Item {
 
     Timer {
         id: retryTimer
-        interval: Math.max(5, root.pollingTime) * 1000
+        interval: Math.max(5, root.pollingTime) * 1000 * root.failureBackoff
         repeat: false
 
         onTriggered: root.refresh()
