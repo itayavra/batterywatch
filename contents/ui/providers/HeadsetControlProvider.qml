@@ -1,10 +1,15 @@
 import QtQuick 2.15
 import org.kde.plasma.plasma5support 2.0 as P5Support
+import org.kde.plasma.plasmoid 2.0
 import "../DeviceUtils.js" as DeviceUtils
 
 Item {
     id: root
     visible: false
+
+    property bool headsetControlEnabled: Plasmoid.configuration.enableHeadsetControlIntegration
+
+    property int pollingTime: Plasmoid.configuration.headsetControlPollingTime
 
     readonly property string command: "/usr/bin/headsetcontrol -b -o json"
     readonly property int wirelessType: 1
@@ -12,6 +17,8 @@ Item {
     property var devices: []
 
     function refresh() {
+        if (!root.headsetControlEnabled)
+            return;
         pollSource.disconnectSource(command);
         pollSource.connectSource(command);
     }
@@ -40,6 +47,16 @@ Item {
         console.info("BatteryWatch HeadsetControl: found", devices.length, "device(s)");
     }
 
+    onHeadsetControlEnabledChanged: {
+        if (root.headsetControlEnabled) {
+            root.refresh();
+        } else {
+            pollSource.disconnectSource(command);
+            retryTimer.stop();
+            root.devices = [];
+        }
+    }
+
     P5Support.DataSource {
         id: pollSource
         engine: "executable"
@@ -49,6 +66,8 @@ Item {
         onNewData: (src, data) => {
             disconnectSource(src);
 
+            if (!root.headsetControlEnabled)
+                return;
             const exitCode = data["exit code"];
             const stdout = data["stdout"] || "";
             const stderr = data["stderr"] || "";
@@ -70,12 +89,15 @@ Item {
             retryTimer.restart();
         }
 
-        Component.onCompleted: root.refresh()
+        Component.onCompleted: {
+            if (root.headsetControlEnabled)
+                root.refresh();
+        }
     }
 
     Timer {
         id: retryTimer
-        interval: 30000
+        interval: Math.max(5, root.pollingTime) * 1000
         repeat: false
 
         onTriggered: root.refresh()

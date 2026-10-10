@@ -26,6 +26,9 @@ KCMUtils.SimpleKCM {
     property alias cfg_enableSolaarIntegration: enableSolaarIntegration.checked
     property alias cfg_solaarPollingTime: solaarPollingTime.value
 
+    property alias cfg_enableHeadsetControlIntegration: enableHeadsetControlIntegration.checked
+    property alias cfg_headsetControlPollingTime: headsetControlPollingTime.value
+
     Kirigami.FormLayout {
         id: page
 
@@ -55,7 +58,7 @@ KCMUtils.SimpleKCM {
 
             QQC2.CheckBox {
                 id: enableOpenLinkHubIntegration
-        }
+            }
         }
 
         QQC2.SpinBox {
@@ -255,6 +258,40 @@ KCMUtils.SimpleKCM {
                 QQC2.ToolTip {
                     visible: solaarPollingHelp.hovered
                     text: i18n("Sets the interval for Solaar device state updates.\nRequires Solaar to be installed; Logitech devices only.")
+                }
+            }
+        }
+
+        Item {
+            Kirigami.FormData.isSection: true
+            Kirigami.FormData.label: i18n("HeadsetControl Integration")
+        }
+
+        QQL.RowLayout {
+            Kirigami.FormData.label: i18n("Enable")
+            QQC2.CheckBox {
+                id: enableHeadsetControlIntegration
+            }
+        }
+
+        QQL.RowLayout {
+            Kirigami.FormData.label: i18n("Polling interval")
+            QQC2.SpinBox {
+                id: headsetControlPollingTime
+                enabled: enableHeadsetControlIntegration.checked
+                from: 5
+                to: 3600
+            }
+            QQC2.Label {
+                text: i18n("s")
+                opacity: enableHeadsetControlIntegration.checked ? 0.7 : 0.5
+            }
+            QQC2.ToolButton {
+                id: headsetControlPollingHelp
+                icon.name: "help-about"
+                QQC2.ToolTip {
+                    visible: headsetControlPollingHelp.hovered
+                    text: i18n("Sets the interval for HeadsetControl battery updates.")
                 }
             }
         }
