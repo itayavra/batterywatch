@@ -77,7 +77,7 @@ Item {
                 name: d.name || i18n("Unknown Device"),
                 serial: d.serial || d.name,
                 percentage: d.percentage,
-                charging: d.charging === true,
+                charging: d.charging,
                 blocked: d.blocked === true,
                 vid: d.vid,
                 pid: d.pid,

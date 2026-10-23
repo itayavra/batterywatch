@@ -963,3 +963,77 @@ test('a multi-battery entry is not filled with single-battery fields', () => {
     assert.equal(merged[0].batteries.length, 1, 'the batteries array was disturbed');
     assert.equal(merged[0].percentage, undefined);
 });
+
+const updateHidDevices = (entries, previous = []) => {
+    const context = vm.createContext({
+        root: { pendingData: entries }, devices: previous, emptyList: [],
+        wirelessType: 1, DeviceUtils, i18n: s => s
+    });
+    vm.runInContext(`function updateDevices() {\n${readFunction('HIDDevicesProvider.qml', 'updateDevices')}\n}`, context);
+    context.updateDevices();
+    return context.devices;
+};
+
+test('HID preserves unknown charging and both known boolean states', () => {
+    for (const charging of [null, undefined, false, true]) {
+        const devices = updateHidDevices([{ name: 'Glorious', serial: 'mouse', percentage: 10, charging }]);
+        assert.equal(devices[0].charging, charging);
+    }
+});
+
+test('HID publishes transitions between unknown and known charging', () => {
+    let devices = updateHidDevices([{ serial: 'mouse', percentage: 10, charging: null }]);
+    devices = updateHidDevices([{ serial: 'mouse', percentage: 10, charging: false }], devices);
+    assert.equal(devices[0].charging, false);
+    devices = updateHidDevices([{ serial: 'mouse', percentage: 10, charging: null }], devices);
+    assert.equal(devices[0].charging, null);
+});
+
+test('a later provider can fill charging left unknown by the HID provider', () => {
+    const hid = updateHidDevices([{ name: 'Glorious', serial: 'mouse', percentage: 10, charging: null }]);
+    const merged = merge(hid, [{ serial: 'mouse', percentage: 11, charging: true }]);
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].percentage, 10);
+    assert.equal(merged[0].charging, true);
+    assert.equal(hid[0].charging, null);
+});
+
+function checkNotifications(devices, notified = {}) {
+    const alerts = [];
+    callFunction(readFunction('main.qml', 'checkBatteryNotifications', '.'),
+        'checkBatteryNotifications', '', {
+            notificationEnabled: true, notificationThreshold: 20,
+            allDevices: devices, notifiedLowBattery: notified,
+            isNotificationEnabled: () => true, DeviceUtils, root: {}, i18n: s => s,
+            batteryNotificationComponent: {
+                createObject: (_root, message) => ({ sendEvent: () => alerts.push(message) })
+            }
+        });
+    return alerts;
+}
+
+test('low-battery notifications skip only batteries known to be charging', () => {
+    for (const charging of [null, undefined, true, false]) {
+        const alerts = checkNotifications([{ serial: 'mouse', percentage: 10, charging }]);
+        assert.equal(alerts.length, charging === true ? 0 : 1);
+    }
+});
+
+test('multi-battery notifications check charging state per battery', () => {
+    const alerts = checkNotifications([{ serial: 'headphones', batteries: [
+        { label: 'Left', percentage: 10, charging: null },
+        { label: 'Right', percentage: 10, charging: false },
+        { label: 'Case', percentage: 10, charging: true }
+    ] }]);
+    assert.equal(alerts.length, 2);
+});
+
+test('learning a charging state does not repeat an existing low-battery alert', () => {
+    const notified = {};
+    const device = { serial: 'mouse', percentage: 10, charging: null };
+    assert.equal(checkNotifications([device], notified).length, 1);
+    assert.equal(checkNotifications([{ ...device, charging: false }], notified).length, 0);
+    assert.equal(checkNotifications([{ ...device, charging: false }], notified).length, 0);
+    checkNotifications([{ ...device, percentage: 80, charging: false }], notified);
+    assert.equal(checkNotifications([{ ...device, charging: false }], notified).length, 1);
+});

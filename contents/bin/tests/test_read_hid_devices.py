@@ -31,29 +31,36 @@ Exit: 0 = all checks passed, 1 = at least one failed.
 
 import builtins
 import contextlib
+import fcntl
 import importlib.machinery
 import importlib.util
 import io
 import json
 import os
 import py_compile
+import re
 import select
 import subprocess
 import sys
 import tempfile
+import threading
+import time
+import types
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BIN = os.path.normpath(os.path.join(HERE, ".."))
 HELPER = os.path.join(BIN, "read_hid_devices")
 
-# Capture the real os functions BEFORE patch_module() replaces os.listdir etc. on the
-# shared os module (rhd.os IS this os module), so the real subprocess run keeps working.
+# Capture originals to verify importing this suite leaves stdlib modules intact.
 real_listdir = os.listdir
 real_osopen = os.open
 real_oswrite = os.write
 real_osread = os.read
 real_osclose = os.close
 real_poll = select.poll
+real_ioctl = fcntl.ioctl
+real_sleep = time.sleep
 
 
 def load_helper():
@@ -70,6 +77,7 @@ def load_helper():
 
 rhd = load_helper()
 unpatched_usb_serial = rhd.usb_serial
+unpatched_feature_exchange = rhd._feature_exchange
 
 # ══════════════════════════════════════════════════════════════════════════
 # Scenario fakes: swap these globals between the M5, SC2, and Azoth scenarios
@@ -200,6 +208,57 @@ def install_sc2_scenario():
     scenario["reply_buf"] = bytearray(16)
     scenario["reply_queue"] = []
     scenario["reply_fd"] = 207
+
+def hid_descriptor_pages(*pages):
+    # Descriptor declaring several usage pages, as real multi-collection
+    # interfaces do (one Global Usage Page item each).
+    out = b""
+    for page in pages:
+        out += bytes([0x05, page]) if page <= 0xFF else bytes([0x06, page & 0xFF, page >> 8])
+    return out + b"\xC0"
+
+def install_glorious_scenario(pid="00002022", usage_page=0xFF01, with_blocked=False):
+    # Glorious Model O Wireless: battery on the vendor collection, selected by
+    # report-descriptor usage page; answered over feature reports, not the
+    # interrupt endpoint.
+    scenario["uevents"] = {
+        "hidraw1": ("DRIVER=hid-generic\nHID_ID=0003:0000258A:%s\n"
+                    "HID_NAME=Glorious Model O Wireless\n"
+                    "HID_PHYS=usb-0000:00:14.0-3/input0\nHID_UNIQ=\n" % pid),
+        "hidraw2": ("DRIVER=hid-generic\nHID_ID=0003:0000258A:%s\n"
+                    "HID_NAME=Glorious Model O Wireless\n"
+                    "HID_PHYS=usb-0000:00:14.0-3/input1\nHID_UNIQ=\n" % pid),
+    }
+    scenario["fake_devs"] = {"/dev/hidraw1": 401, "/dev/hidraw2": 402}
+    scenario["deny"] = with_blocked
+    scenario["writes"] = []
+    scenario["write_data"] = []
+    scenario["reads"] = []
+    scenario["read_sizes"] = []
+    scenario["open_flags"] = []
+    scenario["reply_buf"] = bytearray(65)
+    scenario["reply_queue"] = []
+    scenario["reply_fd"] = 402
+    # only the vendor node (hidraw2) declares the battery usage page
+    scenario["descriptors"] = {"hidraw2": hid_descriptor(usage_page)}
+    scenario["descriptor_reads"] = 0
+    scenario["ioctls"] = []
+
+def set_glorious_reply(pct=42, state=0xA1, cmd=0x83):
+    buf = bytearray(65)
+    buf[1] = state
+    buf[6] = cmd
+    buf[8] = pct
+    scenario["reply_buf"] = buf
+
+def fake_ioctl(fd, request, buf):
+    scenario["ioctls"].append((fd, request, bytes(buf)))
+    # GET_FEATURE (nr 0x07) fills the caller's mutable buffer with the reply
+    if (request & 0xFF) == 0x07 and fd == scenario["reply_fd"]:
+        reply = scenario["reply_buf"][:len(buf)]
+        buf[:len(reply)] = reply
+        return len(reply)
+    return len(buf)
 
 def install_azoth_scenario(pid="00001ACE", with_blocked=False):
     scenario["uevents"] = {
@@ -388,12 +447,15 @@ def patch_module():
     # Scenario fixtures provide only hidraw uevent files.  Do not let their
     # parse_uevent() calls walk the host's real sysfs parent hierarchy.
     rhd.usb_serial = lambda path, vid, pid: None
-    rhd.os.open = fake_osopen
-    rhd.os.listdir = lambda *a: list(scenario["uevents"].keys())
-    rhd.os.write = fake_write
-    rhd.os.read = fake_read
-    rhd.os.close = lambda fd: None
-    rhd.select.poll = FakePoller
+    rhd.os = types.SimpleNamespace(**{**vars(os), "open": fake_osopen,
+        "listdir": lambda *a: list(scenario["uevents"].keys()),
+        "write": fake_write, "read": fake_read, "close": lambda fd: None})
+    rhd.select = types.SimpleNamespace(**{**vars(select), "poll": FakePoller})
+    rhd.fcntl = types.SimpleNamespace(**{**vars(fcntl), "ioctl": fake_ioctl})
+    rhd.time = types.SimpleNamespace(**{**vars(time), "sleep": lambda _s: None})
+    # Protocol tests exercise the worker's real exchange against fake hardware.
+    # Separate tests below exercise the subprocess deadline and output delivery.
+    rhd._feature_exchange = lambda path, schema: rhd._read_feature_report(path, schema.request, schema.settle)
 
 def run_main_capture():
     out = io.StringIO()
@@ -429,10 +491,6 @@ def simulate_env():
         sys.argv = saved_argv
         rhd.UDEV_RULES_DIR = orig_rules
 
-# Prime the tempdir cache BEFORE patch_module() replaces os.open: the first
-# tempfile.mkdtemp() call probes /tmp via os.open(path, flags, 0o600), which
-# the fake would reject (2-arg signature).
-tempfile.gettempdir()
 patch_module()
 
 
@@ -1184,6 +1242,8 @@ def test_simulate_both_blocked_before_any_rule():
              "unblock_command": rhd.udev_unblock_command(0x3434), "deviceType": "mouse"},
             {"name": "Steam Controller 2", "serial": "sim-steam-controller-2", "blocked": True, "vid": "28de", "pid": "1304",
              "unblock_command": rhd.udev_unblock_command(0x28de), "deviceType": "gamepad"},
+            {"name": "Glorious Model O Wireless", "serial": "sim-glorious-model-o", "blocked": True, "vid": "258a", "pid": "2022",
+             "unblock_command": rhd.udev_unblock_command(0x258a), "deviceType": "mouse"},
         ]
 
 def test_simulate_m5_reports_after_its_rule():
@@ -1194,6 +1254,8 @@ def test_simulate_m5_reports_after_its_rule():
             {"name": "Keychron M5", "serial": "sim-keychron-m5", "percentage": 88, "charging": False, "deviceType": "mouse"},
             {"name": "Steam Controller 2", "serial": "sim-steam-controller-2", "blocked": True, "vid": "28de", "pid": "1304",
              "unblock_command": rhd.udev_unblock_command(0x28de), "deviceType": "gamepad"},
+            {"name": "Glorious Model O Wireless", "serial": "sim-glorious-model-o", "blocked": True, "vid": "258a", "pid": "2022",
+             "unblock_command": rhd.udev_unblock_command(0x258a), "deviceType": "mouse"},
         ]
 
 def test_simulate_both_report_after_both_rules():
@@ -1204,6 +1266,8 @@ def test_simulate_both_report_after_both_rules():
         assert json.loads(run_main_capture()) == [
             {"name": "Keychron M5", "serial": "sim-keychron-m5", "percentage": 88, "charging": False, "deviceType": "mouse"},
             {"name": "Steam Controller 2", "serial": "sim-steam-controller-2", "percentage": 85, "charging": True, "deviceType": "gamepad"},
+            {"name": "Glorious Model O Wireless", "serial": "sim-glorious-model-o", "blocked": True, "vid": "258a", "pid": "2022",
+             "unblock_command": rhd.udev_unblock_command(0x258a), "deviceType": "mouse"},
         ]
 
 
@@ -1337,6 +1401,339 @@ def test_sc2_stream_read():
 
 
 # ══════════════════════════════════════════════════════════════════════════
+# Glorious (feature-report transport)
+# ══════════════════════════════════════════════════════════════════════════
+def test_glorious_reads_battery_over_feature_reports():
+    install_glorious_scenario()
+    set_glorious_reply(pct=42)
+    devs = rhd.find_devices()
+    assert len(devs) == 1, f"one entry per physical mouse, got {devs!r}"
+    dev = devs[0]
+    assert dev.devpath == "/dev/hidraw2", f"vendor usage-page node targeted, got {dev.devpath}"
+    assert dev.desc.name == "Glorious Model O Wireless", dev.desc.name
+
+    assert rhd.read_status(dev) == {"percentage": 42, "charging": None}
+
+    # exchange is SET_FEATURE then GET_FEATURE on the interrupt-free path
+    nrs = [req & 0xFF for _fd, req, _b in scenario["ioctls"]]
+    assert nrs == [0x06, 0x07], f"SET then GET feature, got {nrs!r}"
+    assert scenario["ioctls"][0][2] == rhd.GLORIOUS_REQUEST, "request packet sent verbatim"
+    assert scenario["ioctls"][0][2][3] == 0x02 and scenario["ioctls"][0][2][6] == 0x83
+    assert scenario["writes"] == [], "feature transport writes nothing to the endpoint"
+    assert scenario["reads"] == [], "feature transport reads nothing from the endpoint"
+    assert scenario["open_flags"] and all(f & os.O_RDWR for f in scenario["open_flags"]), \
+        "feature reports need the node opened read-write"
+
+def test_glorious_zero_percent_floors_at_one():
+    install_glorious_scenario()
+    set_glorious_reply(pct=0)
+    dev = rhd.find_devices()[0]
+    assert rhd.read_status(dev) == {"percentage": 1, "charging": None}
+
+def test_glorious_asleep_and_bad_echo_report_nothing():
+    for state, cmd, why in ((0xA4, 0x83, "asleep"), (0xA0, 0x83, "waking up"), (0xA1, 0x00, "not a battery reply")):
+        install_glorious_scenario()
+        set_glorious_reply(pct=42, state=state, cmd=cmd)
+        dev = rhd.find_devices()[0]
+        assert rhd.read_status(dev) is None, f"{why} -> no reading"
+
+def test_glorious_matches_any_vendor_usage_page():
+    # The exact vendor page differs per model; the reference implementation
+    # ranks pages rather than filtering, so any 0xffxx page must match.
+    for page in (0xFF01, 0xFF00, 0xFF02, 0xFFA0):
+        install_glorious_scenario(pid="00002034", usage_page=page)  # Model D 2 PRO dongle
+        set_glorious_reply(pct=77)
+        devs = rhd.find_devices()
+        assert len(devs) == 1, f"page {page:#06x}: expected a match, got {devs!r}"
+        assert devs[0].desc.name == "Glorious Model D 2 PRO", devs[0].desc.name
+        assert rhd.read_status(devs[0]) == {"percentage": 77, "charging": None}
+
+def test_glorious_non_vendor_pages_are_ignored():
+    install_glorious_scenario(usage_page=0x0C)  # consumer-control collection
+    assert rhd.find_devices() == [], "a non-vendor collection carries no battery"
+
+def test_glorious_prefers_the_best_ranked_vendor_node():
+    # Both nodes of the same physical mouse expose a vendor page; 0xff01 wins
+    # over 0xff00, matching the reference's interface scoring.
+    install_glorious_scenario()
+    scenario["descriptors"] = {"hidraw1": hid_descriptor(0xFF01), "hidraw2": hid_descriptor(0xFF00)}
+    devs = rhd.find_devices()
+    assert len(devs) == 1, f"still one physical mouse, got {devs!r}"
+    assert devs[0].devpath == "/dev/hidraw1", f"0xff01 outranks 0xff00, got {devs[0].devpath}"
+
+def test_glorious_blocked_reports_udev_rule_with_write_access():
+    install_glorious_scenario(with_blocked=True)
+    with sandboxed_rules():
+        entries = json.loads(run_main_capture())
+    assert len(entries) == 1 and entries[0]["blocked"] is True, entries
+    assert entries[0]["vid"] == "258a" and entries[0]["pid"] == "2022", entries
+    assert entries[0]["deviceType"] == "mouse", entries
+    rule = rhd.udev_rule_for(0x258A)
+    assert 'MODE="0660"' in rule, "feature reports need write access in the udev rule"
+    assert 'ATTRS{idProduct}=="2022"' in rule and 'ATTRS{idProduct}=="201a"' in rule, rule
+
+
+def test_glorious_real_model_o_wireless_node_layout():
+    # Node layout captured from real hardware (258a:2022, diagnose.py): three
+    # interfaces, none declaring 0xff01/0xff00 - the vendor collection sits on
+    # 0xffa0/0xffff. All three answer the battery query; iface 2 is the
+    # best-ranked vendor node and must be the one picked.
+    install_glorious_scenario()
+    scenario["uevents"] = {
+        f"hidraw{n}": ("DRIVER=hid-generic\nHID_ID=0003:0000258A:00002022\n"
+                       "HID_NAME=Glorious Model O Wireless\n"
+                       f"HID_PHYS=usb-0000:02:00.0-1/input{n}\nHID_UNIQ=000000000000\n")
+        for n in (0, 1, 2)
+    }
+    scenario["fake_devs"] = {f"/dev/hidraw{n}": 400 + n for n in (0, 1, 2)}
+    scenario["descriptors"] = {
+        "hidraw0": hid_descriptor_pages(0x01, 0x02, 0x09, 0x0C),
+        "hidraw1": hid_descriptor_pages(0x01, 0x07, 0x08, 0x0C, 0xFFA0, 0xFFFF),
+        "hidraw2": hid_descriptor_pages(0xFFFF),
+    }
+    scenario["reply_fd"] = 402
+    set_glorious_reply(pct=0x5D)  # the byte the real mouse returned
+
+    devs = rhd.find_devices()
+    assert len(devs) == 1, f"one entry for the mouse, got {devs!r}"
+    assert devs[0].devpath == "/dev/hidraw2", f"best-ranked vendor node, got {devs[0].devpath}"
+    # all-zero HID_UNIQ is treated as absent, so the physical path identifies it
+    assert devs[0].serial == "usb-0000:02:00.0-1", devs[0].serial
+    assert rhd.read_status(devs[0]) == {"percentage": 93, "charging": None}
+
+
+def test_feature_reply_requires_nine_bytes_but_not_the_full_buffer():
+    for length in (0, 6, 8, 9, 64, 65):
+        install_glorious_scenario()
+        set_glorious_reply(pct=42)
+        scenario["reply_buf"] = scenario["reply_buf"][:length]
+        result = rhd.read_status(rhd.find_devices()[0])
+        assert result == ({"percentage": 42, "charging": None} if length >= 9 else None), length
+
+
+def test_generic_schema_without_charging_data_reports_unknown():
+    schema = rhd.InputStreamSchema(rhd.DataPos(0, 1), None, None)
+    assert rhd.interpret(schema, {0: b"\x00\x2a"}) == {"percentage": 42, "charging": None}
+
+
+def test_usb_serial_rejects_an_all_zero_string():
+    with tempfile.TemporaryDirectory() as directory:
+        hid_dir = os.path.join(directory, "usb", "1-3", "1-3:1.1", "hid")
+        usb_dir = os.path.dirname(os.path.dirname(hid_dir))
+        os.makedirs(hid_dir)
+        for name, value in (("idVendor", "258a"), ("idProduct", "2022"), ("serial", "000000000000")):
+            with open(os.path.join(usb_dir, name), "w") as file:
+                file.write(value)
+        assert unpatched_usb_serial(os.path.join(hid_dir, "uevent"), 0x258A, 0x2022) is None
+
+
+def test_feature_ioctl_failures_close_the_descriptor_and_preserve_other_devices():
+    import errno
+    for operation in (0x06, 0x07):
+        for error in (errno.EINVAL, errno.EIO):
+            install_glorious_scenario()
+            closed = []
+            def failing_ioctl(fd, request, buf):
+                if request & 0xFF == operation:
+                    raise OSError(error, "test ioctl failure")
+                return fake_ioctl(fd, request, buf)
+            with mock.patch.object(rhd.fcntl, "ioctl", failing_ioctl), \
+                    mock.patch.object(rhd.os, "close", closed.append):
+                assert json.loads(run_main_capture()) == []
+            assert 402 in closed
+            if operation == 0x06:
+                assert scenario["ioctls"] == [], "GET must not follow a failed SET"
+            install_m5_scenario()
+            set_m5_reply(87)
+            assert json.loads(run_main_capture())[0]["percentage"] == 87
+
+
+def test_short_feature_request_does_not_send_get():
+    install_glorious_scenario()
+    with mock.patch.object(rhd.fcntl, "ioctl", return_value=8) as ioctl:
+        assert rhd.read_status(rhd.find_devices()[0]) is None
+    assert ioctl.call_count == 1
+
+
+def test_feature_schema_never_writes_an_output_report():
+    install_glorious_scenario()
+    dev = rhd.find_devices()[0]
+    assert rhd.open_device(dev, dev.source) == 402
+    assert scenario["writes"] == []
+
+
+def test_glorious_charging_is_unknown_for_wireless_and_wired_variants():
+    for model in rhd.KNOWN_DEVICES:
+        if model.parse is not rhd._glorious_parse:
+            continue
+        for variant in model.variants:
+            dev = rhd.FoundDevice("/dev/test", "test", model, variant.pid, model.source)
+            buf = bytearray(9)
+            buf[1], buf[6], buf[8] = 0xA1, 0x83, 20
+            with mock.patch.object(rhd, "_feature_exchange", return_value=bytes(buf)):
+                assert rhd._device_entry(dev)["charging"] is None
+
+
+def test_glorious_serial_rejects_zero_usb_and_hid_serials():
+    install_glorious_scenario()
+    for usb, hid, expected in (("000000000000", "000000000000", "usb-0000:00:14.0-3"),
+                               ("USB-SERIAL", "000000000000", "USB-SERIAL"),
+                               (None, "HID-SERIAL", "HID-SERIAL")):
+        scenario["uevents"] = {name: re.sub(r"HID_UNIQ=.*", f"HID_UNIQ={hid}", text)
+                              for name, text in scenario["uevents"].items()}
+        with mock.patch.object(rhd, "usb_serial", return_value=usb):
+            assert rhd.find_devices()[0].serial == expected
+
+
+def test_razer_uses_the_same_node_ranking_as_glorious():
+    for first_pages, second_pages, expected in (
+        ((0xFF14,), (0xFF14,), "/dev/hidraw6"),
+        ((0xFF14,), (0xFF14, 0xFF00), "/dev/hidraw6"),
+        ((0xFF14, 0xFF00), (0xFF14, 0xFF01), "/dev/hidraw6"),
+        ((0xFF14, 0xFF01), (0xFF14, 0xFF00), "/dev/hidraw5"),
+    ):
+        for reverse in (False, True):
+            install_razer_scenario()
+            original = scenario["uevents"]["hidraw5"]
+            scenario["uevents"]["hidraw6"] = original.replace("input3", "input9")
+            scenario["descriptors"] = {
+                "hidraw5": hid_descriptor_pages(*first_pages),
+                "hidraw6": hid_descriptor_pages(*second_pages),
+            }
+            if reverse:
+                scenario["uevents"] = dict(reversed(list(scenario["uevents"].items())))
+            assert rhd.find_devices()[0].devpath == expected, (first_pages, second_pages, reverse)
+
+
+def test_discovery_keeps_more_than_eight_devices_in_stable_order():
+    install_glorious_scenario()
+    template = scenario["uevents"]["hidraw2"]
+    scenario["uevents"] = {f"hidraw{n}": template.replace("-3/input1", f"-{n + 10}/input1")
+                          for n in reversed(range(12))}
+    scenario["descriptors"] = {name: hid_descriptor(0xFF01) for name in scenario["uevents"]}
+    devs = rhd.find_devices()
+    assert len(devs) == 12
+    assert [d.serial for d in devs] == sorted(d.serial for d in devs)
+
+
+def test_losing_node_does_not_resolve_its_serial():
+    install_glorious_scenario()
+    scenario["descriptors"]["hidraw1"] = hid_descriptor(0xFF01)
+    scenario["descriptors"]["hidraw2"] = hid_descriptor(0xFF00)
+    with mock.patch.object(rhd, "usb_serial", return_value=None) as resolver:
+        assert rhd.find_devices()[0].devpath == "/dev/hidraw1"
+    assert resolver.call_count == 1
+
+
+def test_import_does_not_replace_shared_stdlib_functions():
+    assert (os.open, os.read, os.write, os.close, os.listdir, select.poll, fcntl.ioctl, time.sleep) == (
+        real_osopen, real_osread, real_oswrite, real_osclose, real_listdir, real_poll, real_ioctl, real_sleep)
+    fd = os.open(os.devnull, os.O_RDONLY, dir_fd=None)
+    os.close(fd)
+
+
+# Launch the actual feature worker with its ioctl replaced inside that child.
+# Mode selects a normal reply or a blocking SET/GET without needing HID hardware.
+FEATURE_WORKER = r'''
+import sys, time
+mode = sys.argv.pop(1)
+sys.argv = sys.argv[1:]
+namespace = {"__file__": sys.argv[0], "__name__": "feature_test"}
+with open(sys.argv[0]) as source:
+    exec(compile(source.read(), sys.argv[0], "exec"), namespace)
+def ioctl(fd, request, buf):
+    operation = request & 255
+    if (mode == "set" and operation == 6) or (mode == "get" and operation == 7):
+        time.sleep(30)
+    if operation == 7:
+        buf[1], buf[6], buf[8] = 0xA1, 0x83, 42
+    return len(buf)
+namespace["fcntl"].ioctl = ioctl
+namespace["main"]()
+'''
+
+
+def feature_popen(mode):
+    def launch(command, **kwargs):
+        return subprocess.Popen([command[0], "-c", FEATURE_WORKER, mode, *command[1:]], **kwargs)
+    return launch
+
+
+def test_feature_subprocess_preserves_report_bytes_and_errors():
+    install_glorious_scenario()
+    dev = rhd.find_devices()[0]._replace(devpath=os.devnull)
+    with mock.patch.object(rhd, "_feature_exchange", unpatched_feature_exchange), \
+            mock.patch.object(rhd, "subprocess", types.SimpleNamespace(
+                **{**vars(subprocess), "Popen": feature_popen("reply")})):
+        assert rhd.read_status(dev) == {"percentage": 42, "charging": None}
+        assert rhd.read_status(dev._replace(devpath="/nonexistent-batterywatch-device")) is None
+
+
+def test_feature_timeout_does_not_wait_for_worker_exit_or_pipe_eof():
+    install_glorious_scenario()
+    dev = rhd.find_devices()[0]
+    release = threading.Event()
+    reaping = threading.Event()
+    finished = threading.Event()
+    class PendingWorker:
+        killed = False
+        def communicate(self, timeout=None):
+            if timeout is not None:
+                raise subprocess.TimeoutExpired("feature worker", timeout)
+            reaping.set()
+            release.wait(3)
+            finished.set()
+            return b"", b""
+        def kill(self):
+            self.killed = True
+    process = PendingWorker()
+    try:
+        with mock.patch.object(rhd, "_feature_exchange", unpatched_feature_exchange), \
+                mock.patch.object(rhd, "subprocess", types.SimpleNamespace(
+                    **{**vars(subprocess), "Popen": lambda *args, **kwargs: process})):
+            assert rhd.read_status(dev) is None
+            assert process.killed
+            assert reaping.wait(1)
+            assert not finished.is_set(), "reader waited for the pending kernel operation"
+    finally:
+        release.set()
+        assert finished.wait(1)
+
+
+def test_feature_timeout_delivers_other_device_json_and_exits():
+    # Exercise the complete helper lifetime, not just a thread join. Its stdout
+    # must close while an isolated device's SET or GET is still blocked.
+    driver = r'''
+import importlib.util, sys, types
+spec = importlib.util.spec_from_file_location("hidtests", sys.argv[1])
+t = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(t)
+rhd = t.rhd
+t.install_glorious_scenario()
+feature = rhd.find_devices()[0]._replace(devpath=t.os.devnull)
+feature = feature._replace(source=feature.source._replace(timeout=0.15, settle=0))
+t.install_m5_scenario()
+t.set_m5_reply(87)
+mouse = rhd.find_devices()[0]
+rhd.find_devices = lambda: [feature, mouse]
+rhd._feature_exchange = t.unpatched_feature_exchange
+rhd.subprocess = types.SimpleNamespace(**{**vars(t.subprocess), "Popen": t.feature_popen(sys.argv[2])})
+rhd._DEBUG = True
+sys.argv = ["read_hid_devices", "--debug"]
+rhd.main()
+'''
+    for operation in ("set", "get"):
+        started = time.monotonic()
+        result = subprocess.run([sys.executable, "-c", driver, __file__, operation],
+                                capture_output=True, text=True, timeout=3)
+        assert result.returncode == 0, result.stderr
+        assert time.monotonic() - started < 2
+        entries = json.loads(result.stdout)
+        assert len(entries) == 1 and entries[0]["percentage"] == 87, entries
+        assert "feature report timed out after 0.15s" in result.stderr
+
+
+# ══════════════════════════════════════════════════════════════════════════
 # --debug diagnostics (stderr only; stdout stays the JSON the widget reads)
 # ══════════════════════════════════════════════════════════════════════════
 @contextlib.contextmanager
@@ -1381,6 +1778,17 @@ def test_debug_output_records_open_and_write_failures():
         assert rhd.read_status(rhd.find_devices()[0]) is None
     assert "open(/dev/hidraw6, O_RDWR) failed: [Errno 13] Permission denied" in stderr.getvalue()
 
+def test_debug_output_explains_a_silent_glorious_mouse():
+    # an asleep mouse is dropped without a reading; the log shows why
+    install_glorious_scenario()
+    set_glorious_reply(pct=42, state=0xA4)
+    with debug_stderr() as stderr:
+        assert rhd.read_status(rhd.find_devices()[0]) is None
+    log = stderr.getvalue()
+    assert "set feature 00 00 00 02 02 00 83" in log, "request bytes"
+    assert "received 00 a4" in log, "reply bytes with the asleep link state"
+    assert "reading None" in log, log
+
 
 # ══════════════════════════════════════════════════════════════════════════
 # Helper as a subprocess (real run, no device)
@@ -1388,31 +1796,16 @@ def test_debug_output_records_open_and_write_failures():
 def test_helper_compiles():
     assert py_compile.compile(HELPER, doraise=True) is not None
 
-@contextlib.contextmanager
-def real_os():
-    # A subprocess needs the REAL os.read/write/close/listdir and select.poll -
-    # the scenario monkey-patches live on the shared os/select modules and would
-    # corrupt pipe I/O, so restore them around the run, then re-patch.
-    os.open, os.write, os.read, os.close = real_osopen, real_oswrite, real_osread, real_osclose
-    os.listdir = real_listdir
-    select.poll = real_poll
-    try:
-        yield
-    finally:
-        patch_module()
-
 def test_helper_real_run_emits_valid_json():
-    with real_os():
-        r = subprocess.run([sys.executable, HELPER], capture_output=True, text=True,
-                           cwd=os.path.dirname(HELPER), timeout=30)
+    r = subprocess.run([sys.executable, HELPER], capture_output=True, text=True,
+                       cwd=os.path.dirname(HELPER), timeout=30)
     assert r.returncode == 0, f"rc={r.returncode} stderr={r.stderr!r}"
     parsed = json.loads(r.stdout.strip())
     assert isinstance(parsed, list), f"stdout={r.stdout.strip()!r}"
 
 def test_debug_flag_keeps_stdout_valid_json():
-    with real_os():
-        r = subprocess.run([sys.executable, HELPER, "--debug", "--simulate"], capture_output=True,
-                           text=True, cwd=os.path.dirname(HELPER), timeout=30)
+    r = subprocess.run([sys.executable, HELPER, "--debug", "--simulate"], capture_output=True,
+                       text=True, cwd=os.path.dirname(HELPER), timeout=30)
     assert r.returncode == 0, f"rc={r.returncode} stderr={r.stderr!r}"
     assert isinstance(json.loads(r.stdout.strip()), list), f"stdout={r.stdout.strip()!r}"
 
