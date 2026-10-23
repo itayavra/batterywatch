@@ -255,6 +255,82 @@ RAZER_BATTERY_REQUEST = _razer_get_request(0x21)
 RAZER_CHARGING_REQUEST = _razer_get_request(0x2A)
 
 
+# ── Corsair Bragi protocol (K57 RGB Wireless through its 1b62 dongle) ─────
+# Per ckb-next bragi_proto.h and OpenLinkHub k57rgbWU. Host packet: address,
+# command, property. Reply: first byte, command, status, then a little-endian
+# value. Only GET is ever sent. The dongle answers 0x05 (not supported) for
+# the battery at its own address, so the battery is asked of the keyboard.
+BRAGI_REPORT_LEN = 64
+BRAGI_DONGLE = 0x08
+BRAGI_KEYBOARD = 0x09                # first child of the dongle
+BRAGI_GET = 0x02
+BRAGI_STATUS_OK = 0x00
+BRAGI_PAIRED_DEVICES = 0x36          # bitmap of linked children, bit 1 = keyboard
+BRAGI_BATTERY_LEVEL = 0x0F           # tenths of a percent
+BRAGI_BATTERY_STATUS = 0x10          # 1 charging, 2 discharging, 3 fully charged
+BRAGI_KEYBOARD_LINKED = 1 << 1
+BRAGI_CHARGING = 0x01
+BRAGI_BATTERY_STATES = (0x01, 0x02, 0x03)
+
+# The command interface has no report ID, so hidraw takes a leading 0x00
+# report number before the 64-byte Bragi packet.
+def _bragi_get_request(address, prop):
+    request = bytearray(1 + BRAGI_REPORT_LEN)
+    request[1:4] = bytes([address, BRAGI_GET, prop])
+    return bytes(request)
+
+# The 1b62 dongle starts a reply with the child index (address - 0x08):
+# 0x00 from the dongle, 0x01 from the keyboard. ckb-next expects the address
+# itself there, so both are accepted. report_id holds the requested address.
+class BragiTransaction(RequestTransaction):
+    __slots__ = ()
+
+    def rejection_reason(self, buf) -> str | None:
+        if not buf:
+            return "empty packet"
+        child_index = self.report_id - BRAGI_DONGLE
+        if buf[0] not in (child_index, self.report_id):
+            return (f"first byte {buf[0]:#04x} is neither the child index {child_index:#04x} "
+                    f"nor the address {self.report_id:#04x}")
+        return self.validate_reply(buf)
+
+def _bragi_value(buf):
+    return int.from_bytes(buf[3:5], "little")
+
+# The first byte is checked by BragiTransaction.rejection_reason
+def _bragi_reply_check(value_rejection):
+    def check(buf):
+        if len(buf) != BRAGI_REPORT_LEN:
+            return f"expected {BRAGI_REPORT_LEN}-byte Bragi reply, got {len(buf)} bytes"
+        if buf[1] != BRAGI_GET:
+            return f"Bragi command {buf[1]:#04x} is not GET {BRAGI_GET:#04x}"
+        if buf[2] != BRAGI_STATUS_OK:
+            return f"Bragi status {buf[2]:#04x} is not success"
+        return value_rejection(_bragi_value(buf))
+    return check
+
+def _bragi_link_rejection(value):
+    if not value & BRAGI_KEYBOARD_LINKED:
+        return f"keyboard is not linked to the dongle (paired bitmap {value:#06x})"
+    return None
+
+def _bragi_level_rejection(value):
+    if not 1 <= value <= 1000:
+        return f"Bragi battery level {value} is outside 1..1000"
+    return None
+
+def _bragi_status_rejection(value):
+    if value not in BRAGI_BATTERY_STATES:
+        return f"Bragi battery status {value} is not 1, 2 or 3"
+    return None
+
+def _bragi_parse(replies):
+    return {
+        "percentage": round(_bragi_value(replies["level"]) / 10),
+        "charging": _bragi_value(replies["status"]) == BRAGI_CHARGING,
+    }
+
+
 KNOWN_DEVICES = [
     Device(
         name="Keychron M5",
@@ -394,6 +470,42 @@ KNOWN_DEVICES = [
             ),
         ),
         parse=_razer_parse,
+    ),
+    Device(
+        name="Corsair K57 RGB Wireless",
+        device_type=DeviceType.KEYBOARD,
+        vid=0x1B1C,
+        # The dongle's interface 1 is the Bragi command channel. Interface 2
+        # shares its vendor page but is input only, so the interface decides.
+        variants=(DeviceVariant(0x1B62, 1),),
+        source=RequestSchema(
+            charge=DataPos(BRAGI_KEYBOARD - BRAGI_DONGLE, 3),
+            charge_range=None,
+            status=None,
+            timeout=REQUEST_TIMEOUT_SEC,
+            # The battery is asked only after the dongle reports the keyboard linked
+            transactions=(
+                BragiTransaction(
+                    key="link",
+                    request=_bragi_get_request(BRAGI_DONGLE, BRAGI_PAIRED_DEVICES),
+                    report_id=BRAGI_DONGLE,
+                    validate_reply=_bragi_reply_check(_bragi_link_rejection),
+                ),
+                BragiTransaction(
+                    key="level",
+                    request=_bragi_get_request(BRAGI_KEYBOARD, BRAGI_BATTERY_LEVEL),
+                    report_id=BRAGI_KEYBOARD,
+                    validate_reply=_bragi_reply_check(_bragi_level_rejection),
+                ),
+                BragiTransaction(
+                    key="status",
+                    request=_bragi_get_request(BRAGI_KEYBOARD, BRAGI_BATTERY_STATUS),
+                    report_id=BRAGI_KEYBOARD,
+                    validate_reply=_bragi_reply_check(_bragi_status_rejection),
+                ),
+            ),
+        ),
+        parse=_bragi_parse,
     ),
 ]
 
@@ -573,15 +685,31 @@ def _udev_mode_for(vid):
             return "0660" if isinstance(dev.source, RequestSchema) else "0440"
     return "0660"
 
+# A variant bound to an interface grants access to that interface only
+def _udev_interface_match(variant):
+    if variant.iface is None:
+        return ""
+    return f'ENV{{ID_USB_INTERFACE_NUM}}=="{variant.iface:02d}", '
+
+# systemd before v258 does not import usb_id for hidraw nodes, which is what
+# sets ID_USB_INTERFACE_NUM, so the rule file imports it when a line needs it
+def _udev_usb_id_import(vid):
+    return (f'SUBSYSTEM=="hidraw", ATTRS{{idVendor}}=="{vid:04x}", '
+            f'ENV{{ID_USB_INTERFACE_NUM}}=="", IMPORT{{builtin}}="usb_id"')
+
 # One udev rule line per connection variant of the device
 def udev_rule_for(vid):
+    variants = [variant for dev in KNOWN_DEVICES if dev.vid == vid
+                for variant in dev.variants]
     lines = [
         f'SUBSYSTEM=="hidraw", ATTRS{{idVendor}}=="{vid:04x}", '
         f'ATTRS{{idProduct}}=="{variant.pid:04x}", '
+        f'{_udev_interface_match(variant)}'
         f'MODE="{_udev_mode_for(vid)}", TAG+="uaccess", TAG+="udev-acl"'
-        for dev in KNOWN_DEVICES if dev.vid == vid
-        for variant in dev.variants
+        for variant in variants
     ]
+    if any(variant.iface is not None for variant in variants):
+        lines.insert(0, _udev_usb_id_import(vid))
     if lines:
         return "\n".join(lines)
     # Unknown device: a vid-wide rule still helps the owner track it down
@@ -602,7 +730,7 @@ def udev_unblock_command(vid):
         f"sudo sh -c 'tee {path} >/dev/null <<EOF\n"
         f"{body}\n"
         f"EOF'\n"
-        f"sudo udevadm control --reload-rules && sudo udevadm trigger"
+        f"sudo udevadm control --reload-rules && sudo udevadm trigger --subsystem-match=hidraw"
     )
 
 # Goes through /sys/class/hidraw* and collects all known interfaces

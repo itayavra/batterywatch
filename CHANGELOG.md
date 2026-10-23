@@ -5,16 +5,25 @@
 ### Added
 - **BlueZ integration** — battery percentage of connected Bluetooth devices that report battery to BlueZ but not to UPower (e.g. 8bitdo controllers), read through `bluetoothctl` with a configurable polling interval (default 5s) and a disconnect action. Charging is reported as unknown rather than "not charging", so a provider that knows the state fills it in (contributed by @birrkan)
 - **Low-battery notifications** — enable alerts, and set a battery threshold; use the popup's bell toggle to mute individual devices. BatteryWatch sends one system notification when a monitored battery is at or below the threshold and not charging; it can alert again after the battery rises above the threshold and later drops low again. Muted devices are saved across restarts (contributed by @YourM4jesty, issue #60)
+- **HeadsetControl integration** — battery percentage and charging state of headsets supported by [HeadsetControl](https://github.com/Sapd/HeadsetControl), read from its `-b -o json` output with a configurable polling interval (default 5s); requires HeadsetControl to be installed (contributed by @segarra99)
+- **Corsair K57 RGB Wireless support** — battery percentage and charging state of the keyboard through its own USB dongle (1b1c:1b62), read directly via three Bragi GET requests on the dongle's command interface (interface 1): the dongle's paired-device list first, then the keyboard's battery level and battery status, so the keyboard is never asked while it is not linked. Every reply must start with the child index of the asked address (0x00 from the dongle, 0x01 from the keyboard, as the dongle sends it) or with the address itself, and carry the GET command, a success status and a valid value before anything is decoded. Only GET is ever sent: no setting is written and software mode is never entered (contributed by @Lukk17)
 
 ### Changed
 - **Providers fill each other's gaps** — a device reported by two providers is one entry: the higher-priority reading stays, and the later provider fills what it left missing — a percentage it does not have, or the charging state it cannot know. A permission-blocked entry is replaced as soon as another provider reads the device
 - **Bluetooth devices UPower reports without a serial are now identified by their MAC** — the identity BlueZ and Solaar report them under, so the same device merges into one entry instead of two. A device hidden under its old path-based identity might reappear and would need hiding again due to this change
 - **Solaar discovered however it was installed** — the helper re-executes into whichever Python carries Solaar's library (distro/pip/pipx/conda/NixOS/venv), hands off to a Flatpak Solaar's own sandbox, caches the proven-good runner between polls, and explains what it tried when Solaar is missing. Confirmed on a Flathub-installed Solaar 1.1.20 (system scope) — the setup that previously failed — where the keyboard, mouse and headset that UPower never reported finally appeared once the hidraw rule was copied (issue #2)
+- **HID udev rules grant access to the battery interface only** — a device whose battery sits on one interface (Keychron M5, ROG Azoth, Steam Controller 2) now gets a rule that matches that interface number, so its typing and other interfaces keep their default permissions. The rule file imports the USB interface number itself, because systemd before v258 does not set it for hidraw nodes. The "Copy command" now re-triggers only hidraw devices instead of every device on the system. A rule file installed by an earlier version keeps working and is not rewritten (contributed by @Lukk17)
+
+### Fixed
+- **Logitech G502 Lightspeed shown as a keyboard** — UPower reported the mouse as a keyboard because its HID++ interface advertises the G-keys as a keyboard collection; it is now mapped to mouse, like the other Logitech mice (contributed by @ballofmatts)
 
 ### Contributors
 - @birrkan — BlueZ integration (initial BluezQt implementation, reworked to bluetoothctl during review)
 - @CorneliusKluge — issue #2: tireless on-device testing across many builds, from the first hidraw diagnostics to confirming the Flatpak discovery on his Flathub setup; his detailed reports and patience shaped this whole integration — thank you!
 - @YourM4jesty — low-battery notifications (threshold setting, per-device toggle, and muted devices list persistence)
+- @ballofmatts — G502 Lightspeed device-type fix
+- @segarra99 — HeadsetControl integration
+- @Lukk17 — Corsair K57 RGB Wireless dongle support and scoped HID udev rules
 
 ## [0.3.2] - 2026-10-05
 

@@ -14,6 +14,9 @@ sysfs + hidraw devices and verifies every behavior the widget depends on:
                   charging-state decode, blocked reporting, and udev rules.
   Barracuda X Chroma (Razer): ordered battery + charging requests, strict
                   reply correlation/validation, captured-packet decoding.
+  K57 RGB Wireless (Corsair): Bragi GET-only link, level and status requests
+                  through the dongle's command interface, reply validation,
+                  no keyboard request while the keyboard is not linked.
   SC2 (stream):   battery decode from stream report, charging state, no write.
 
 Written as plain pytest-style test_*() functions so they read like idiomatic
@@ -294,6 +297,64 @@ def install_razer_scenario(with_blocked=False, usage_page=0xFF14):
     scenario["descriptors"] = ({"hidraw5": hid_descriptor(usage_page)}
                                if usage_page is not None else {})
     scenario["descriptor_reads"] = 0
+
+# ── Corsair K57 RGB Wireless dongle (1b1c:1b62, Bragi protocol) ─────────────
+# The dongle exposes six HID interfaces. Interface 1 is the Bragi command
+# channel. Interface 2 shares its vendor page but is input only.
+K57_INTERFACE_NODES = {"hidraw5": 0, "hidraw6": 1, "hidraw7": 2,
+                       "hidraw8": 3, "hidraw9": 4, "hidraw10": 5}
+K57_COMMAND_FD = 401
+
+def k57_request(address, prop):
+    return bytes([0x00, address, 0x02, prop]) + b"\x00" * 61
+
+K57_LINK_REQUEST = k57_request(0x08, 0x36)
+K57_LEVEL_REQUEST = k57_request(0x09, 0x0F)
+K57_STATUS_REQUEST = k57_request(0x09, 0x10)
+
+# Captured on hardware. Byte 0 is the child index (address - 0x08), not the
+# address: 0x00 from the dongle, 0x01 from the keyboard. The link value
+# 0x0002 has the keyboard bit set, the level value 0x03e8 is 100.0 percent,
+# and status value 3 is fully charged.
+K57_LINK_REPLY_CAPTURE = bytes.fromhex("00 02 00 02 00") + b"\x00" * 59
+K57_LEVEL_REPLY_CAPTURE = bytes.fromhex("01 02 00 e8 03") + b"\x00" * 59
+K57_STATUS_REPLY_CAPTURE = bytes.fromhex("01 02 00 03 00") + b"\x00" * 59
+# Captured on hardware: GET 0x0f at the dongle address is not supported
+K57_DONGLE_LEVEL_REPLY_CAPTURE = bytes.fromhex("00 02 05 a4 6a 00 20") + b"\x00" * 57
+
+def bragi_reply(value=0, status=0x00, command=0x02, length=64, first_byte=0x01):
+    buf = bytearray(max(length, 5))
+    buf[0] = first_byte
+    buf[1] = command
+    buf[2] = status
+    buf[3:5] = value.to_bytes(2, "little")
+    return bytes(buf[:length])
+
+def k57_uevent(iface):
+    return ("DRIVER=hid-generic\nHID_ID=0003:00001B1C:00001B62\n"
+            "HID_NAME=Corsair K57 RGB Wireless dongle\n"
+            f"HID_PHYS=usb-0000:00:14.0-4/input{iface}\n"
+            "HID_UNIQ=3E7EE6855E013742\n")
+
+def install_k57_scenario(with_blocked=False, nodes=K57_INTERFACE_NODES,
+                         level=873, battery_status=0x02):
+    scenario["uevents"] = {node: k57_uevent(iface) for node, iface in nodes.items()}
+    scenario["fake_devs"] = {f"/dev/{node}": 400 + iface for node, iface in nodes.items()}
+    scenario["deny"] = with_blocked
+    scenario["writes"] = []
+    scenario["write_data"] = []
+    scenario["reads"] = []
+    scenario["read_sizes"] = []
+    scenario["open_flags"] = []
+    scenario["descriptors"] = {}
+    scenario["descriptor_reads"] = 0
+    scenario["reply_buf"] = bytearray(0)
+    scenario["reply_queue"] = [
+        K57_LINK_REPLY_CAPTURE,
+        bragi_reply(level),
+        bragi_reply(battery_status),
+    ]
+    scenario["reply_fd"] = K57_COMMAND_FD
 
 def set_m5_reply(byte20=87, report_id=0xB4, cmd=0x06):
     buf = bytearray(64)
@@ -809,6 +870,179 @@ def test_razer_blocked_entry_uses_existing_request_schema_udev_path():
 
 
 # ══════════════════════════════════════════════════════════════════════════
+# Corsair K57 RGB Wireless: Bragi GET requests through the 1b62 dongle
+# ══════════════════════════════════════════════════════════════════════════
+def k57_device():
+    return next(dev for dev in rhd.KNOWN_DEVICES
+                if dev.name == "Corsair K57 RGB Wireless")
+
+def test_k57_profile_sends_only_the_three_bragi_get_requests():
+    dev = k57_device()
+    assert dev.device_type == rhd.DeviceType.KEYBOARD
+    assert dev.vid == 0x1B1C
+    assert dev.variants == (rhd.DeviceVariant(0x1B62, 1),)
+    transactions = dev.source.transactions
+    assert [transaction.key for transaction in transactions] == ["link", "level", "status"]
+    assert [transaction.request for transaction in transactions] == [
+        K57_LINK_REQUEST, K57_LEVEL_REQUEST, K57_STATUS_REQUEST
+    ]
+
+def test_k57_captured_link_reply_is_accepted():
+    install_k57_scenario(level=873, battery_status=0x02)
+    assert scenario["reply_queue"][0] == K57_LINK_REPLY_CAPTURE
+    assert rhd.read_status(rhd.find_devices()[0]) == {"percentage": 87, "charging": False}
+    assert scenario["write_data"] == [K57_LINK_REQUEST, K57_LEVEL_REQUEST, K57_STATUS_REQUEST]
+    assert scenario["writes"] == [K57_COMMAND_FD] * 3, "every request goes to the command interface"
+    assert scenario["read_sizes"] == [65, 65, 65]
+    assert len(scenario["reads"]) == 3
+
+def test_k57_captured_exchange_decodes_100_percent_fully_charged():
+    install_k57_scenario()
+    scenario["reply_queue"] = [K57_LINK_REPLY_CAPTURE, K57_LEVEL_REPLY_CAPTURE,
+                               K57_STATUS_REPLY_CAPTURE]
+    assert rhd.read_status(rhd.find_devices()[0]) == {"percentage": 100, "charging": False}
+    assert scenario["write_data"] == [K57_LINK_REQUEST, K57_LEVEL_REQUEST, K57_STATUS_REQUEST]
+    assert bragi_reply(0x03) == K57_STATUS_REPLY_CAPTURE, "synthetic replies match the capture"
+
+def test_k57_reply_starting_with_the_address_is_accepted_too():
+    install_k57_scenario()
+    scenario["reply_queue"] = [bragi_reply(0x0002, first_byte=0x08),
+                               bragi_reply(873, first_byte=0x09),
+                               bragi_reply(0x02, first_byte=0x09)]
+    assert rhd.read_status(rhd.find_devices()[0]) == {"percentage": 87, "charging": False}
+
+def test_k57_dongle_reply_is_not_taken_as_the_keyboard_battery():
+    install_k57_scenario()
+    scenario["reply_queue"] = [K57_LINK_REPLY_CAPTURE,
+                               bragi_reply(873, first_byte=0x00),   # the dongle's child index
+                               bragi_reply(873), bragi_reply(0x02)]
+    assert rhd.read_status(rhd.find_devices()[0]) == {"percentage": 87, "charging": False}
+    assert len(scenario["reads"]) == 4
+
+    install_k57_scenario()
+    scenario["reply_queue"] = [K57_LINK_REPLY_CAPTURE, K57_DONGLE_LEVEL_REPLY_CAPTURE]
+    assert rhd.read_status(rhd.find_devices()[0]) is None
+    assert scenario["write_data"] == [K57_LINK_REQUEST, K57_LEVEL_REQUEST]
+
+def test_k57_charging_status_decodes_charging():
+    install_k57_scenario(level=456, battery_status=0x01)
+    assert rhd.read_status(rhd.find_devices()[0]) == {"percentage": 46, "charging": True}
+
+def test_k57_fully_charged_status_decodes_not_charging():
+    install_k57_scenario(level=1000, battery_status=0x03)
+    assert rhd.read_status(rhd.find_devices()[0]) == {"percentage": 100, "charging": False}
+
+def test_k57_unlinked_keyboard_sends_no_keyboard_request():
+    install_k57_scenario()
+    scenario["reply_queue"] = [bragi_reply(0x0001, first_byte=0x00)]   # only the dongle bit set
+    assert rhd.read_status(rhd.find_devices()[0]) is None
+    assert scenario["write_data"] == [K57_LINK_REQUEST]
+
+def test_k57_bragi_not_supported_status_publishes_nothing():
+    install_k57_scenario()
+    scenario["reply_queue"] = [K57_LINK_REPLY_CAPTURE, bragi_reply(873, status=0x05)]
+    assert rhd.read_status(rhd.find_devices()[0]) is None
+    assert scenario["write_data"] == [K57_LINK_REQUEST, K57_LEVEL_REQUEST]
+
+    install_k57_scenario()
+    scenario["reply_queue"] = [bragi_reply(0x0002, status=0x05, first_byte=0x00)]
+    assert rhd.read_status(rhd.find_devices()[0]) is None
+    assert scenario["write_data"] == [K57_LINK_REQUEST]
+
+def test_k57_reply_with_another_first_byte_is_ignored():
+    install_k57_scenario()
+    scenario["reply_queue"] = [
+        K57_LINK_REPLY_CAPTURE,
+        bragi_reply(873, first_byte=0x02),   # neither the child index 0x01 nor 0x09
+        bragi_reply(873),
+        bragi_reply(0x02),
+    ]
+    assert rhd.read_status(rhd.find_devices()[0]) == {"percentage": 87, "charging": False}
+    assert len(scenario["reads"]) == 4
+
+    install_k57_scenario()
+    scenario["reply_queue"] = [bragi_reply(0x0002, first_byte=0x01)]
+    assert rhd.read_status(rhd.find_devices()[0]) is None
+    assert scenario["write_data"] == [K57_LINK_REQUEST]
+
+def test_k57_rejects_wrong_length_and_non_get_replies():
+    install_k57_scenario()
+    scenario["reply_queue"] = [
+        K57_LINK_REPLY_CAPTURE[:63],
+        bragi_reply(0x0002, command=0x01, first_byte=0x00),
+        K57_LINK_REPLY_CAPTURE,
+        bragi_reply(873),
+        bragi_reply(0x02),
+    ]
+    assert rhd.read_status(rhd.find_devices()[0]) == {"percentage": 87, "charging": False}
+    assert len(scenario["reads"]) == 5
+
+def test_k57_level_outside_1_to_1000_is_rejected():
+    for level in (0, 1001):
+        install_k57_scenario()
+        scenario["reply_queue"] = [K57_LINK_REPLY_CAPTURE, bragi_reply(level)]
+        assert rhd.read_status(rhd.find_devices()[0]) is None, level
+        assert scenario["write_data"] == [K57_LINK_REQUEST, K57_LEVEL_REQUEST], level
+
+    install_k57_scenario(level=1, battery_status=0x02)
+    assert rhd.read_status(rhd.find_devices()[0]) == {"percentage": 0, "charging": False}
+
+def test_k57_unknown_battery_status_is_rejected():
+    for battery_status in (0x00, 0x04):
+        install_k57_scenario(battery_status=battery_status)
+        assert rhd.read_status(rhd.find_devices()[0]) is None, battery_status
+
+def test_k57_second_step_timeout_sends_no_third_request():
+    install_k57_scenario()
+    scenario["reply_queue"] = [K57_LINK_REPLY_CAPTURE]
+    assert rhd.read_status(rhd.find_devices()[0]) is None
+    assert scenario["write_data"] == [K57_LINK_REQUEST, K57_LEVEL_REQUEST]
+
+def test_k57_discovery_picks_interface_1_and_never_hidraw7():
+    install_k57_scenario()
+    devs = rhd.find_devices()
+    assert [dev.devpath for dev in devs] == ["/dev/hidraw6"]
+    assert devs[0].pid == 0x1B62
+    assert scenario["descriptor_reads"] == 0, "the interface number alone selects the node"
+
+    install_k57_scenario(nodes={node: iface for node, iface in K57_INTERFACE_NODES.items()
+                                if node != "hidraw6"})
+    assert rhd.find_devices() == [], "hidraw7 shares the vendor page but is input only"
+
+def test_k57_every_request_is_a_bragi_get():
+    install_k57_scenario()
+    assert rhd.read_status(rhd.find_devices()[0]) is not None
+    for transaction in k57_device().source.transactions:
+        assert len(transaction.request) == 65
+        assert transaction.request[0] == 0x00, "report number of a report-id-less interface"
+        assert transaction.request[2] == 0x02, "GET only, never SET"
+    assert len(scenario["write_data"]) == 3
+    for packet in scenario["write_data"]:
+        assert packet[1] in (0x08, 0x09), f"not addressed to the dongle or keyboard: {packet.hex(' ')}"
+        assert packet[2] == 0x02, f"non-GET packet written: {packet.hex(' ')}"
+        assert packet[3] in (0x36, 0x0F, 0x10), f"unexpected property: {packet.hex(' ')}"
+        assert not any(packet[4:]), f"GET carries no payload: {packet.hex(' ')}"
+
+def test_k57_serial_is_the_dongle_usb_serial():
+    install_k57_scenario()
+    entry = rhd._device_entry(rhd.find_devices()[0])
+    assert entry == {"name": "Corsair K57 RGB Wireless", "serial": "3E7EE6855E013742",
+                     "percentage": 87, "charging": False, "deviceType": "keyboard"}
+
+def test_k57_blocked_entry_and_udev_rule():
+    install_k57_scenario(with_blocked=True)
+    dev = rhd.find_devices()[0]
+    assert rhd.is_blocked(dev) is True
+    entry = rhd._device_entry(dev)
+    assert entry["blocked"] is True
+    assert entry["vid"] == "1b1c"
+    assert entry["pid"] == "1b62"
+    rule = rhd.udev_rule_for(0x1B1C)
+    assert 'ATTRS{idProduct}=="1b62"' in rule
+    assert rule.count('MODE="0660"') == 1
+
+
+# ══════════════════════════════════════════════════════════════════════════
 # M5: blocked (needs udev rule) reporting
 # ══════════════════════════════════════════════════════════════════════════
 def test_is_blocked_true_on_eacces():
@@ -873,6 +1107,44 @@ def test_udev_unblock_command_contains_rule_and_reload():
     assert 'ATTRS{idVendor}=="3434"' in cmd
     assert "udevadm control --reload-rules" in cmd
     assert "udevadm trigger" in cmd
+
+def test_udev_rule_matches_each_variant_interface():
+    lines = rhd.udev_rule_for(0x0B05).split("\n")
+    by_pid = {pid: [line for line in lines if f'ATTRS{{idProduct}}=="{pid}"' in line]
+              for pid in ("1a83", "1a85", "1ace")}
+    assert all(len(found) == 1 for found in by_pid.values()), by_pid
+    assert 'ENV{ID_USB_INTERFACE_NUM}=="01"' in by_pid["1a83"][0]
+    assert 'ENV{ID_USB_INTERFACE_NUM}=="01"' in by_pid["1a85"][0]
+    assert 'ENV{ID_USB_INTERFACE_NUM}=="02"' in by_pid["1ace"][0]
+    assert rhd.udev_rule_for(0x3434).count('ENV{ID_USB_INTERFACE_NUM}=="04"') == 2
+    sc2 = rhd.udev_rule_for(0x28DE)
+    assert 'ATTRS{idProduct}=="1302", ENV{ID_USB_INTERFACE_NUM}=="00"' in sc2
+    assert 'ATTRS{idProduct}=="1304", ENV{ID_USB_INTERFACE_NUM}=="02"' in sc2
+
+def test_udev_rule_imports_usb_id_before_matching_the_interface():
+    # systemd before v258 does not import usb_id for hidraw nodes, so the
+    # interface number would be missing without this line
+    lines = rhd.udev_rule_for(0x3434).split("\n")
+    assert lines[0] == ('SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3434", '
+                        'ENV{ID_USB_INTERFACE_NUM}=="", IMPORT{builtin}="usb_id"')
+    assert all('ENV{ID_USB_INTERFACE_NUM}=="04"' in line for line in lines[1:])
+
+def test_udev_rule_without_interface_has_no_interface_match():
+    rule = rhd.udev_rule_for(0x1532)
+    assert "ID_USB_INTERFACE_NUM" not in rule
+    assert "IMPORT" not in rule
+    assert 'ATTRS{idProduct}=="0574"' in rule
+
+def test_udev_rule_for_unknown_vendor_stays_vendor_wide():
+    assert rhd.udev_rule_for(0xABCD) == (
+        'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="abcd", '
+        'MODE="0660", TAG+="uaccess", TAG+="udev-acl"'
+    )
+
+def test_udev_unblock_command_triggers_only_hidraw_devices():
+    cmd = rhd.udev_unblock_command(0x3434)
+    assert cmd.endswith("sudo udevadm control --reload-rules && "
+                        "sudo udevadm trigger --subsystem-match=hidraw"), cmd
 
 def test_udev_unblock_command_is_readable_heredoc():
     # Wrapped in `sudo sh -c '...'` so the same heredoc pastes in sh/bash/zsh/fish
