@@ -14,7 +14,8 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, 'DeviceUtils.js'), 'utf8'),
 const DeviceUtils = {
     canonicalSerial: context.canonicalSerial,
     deviceIdentity: context.deviceIdentity,
-    getIconForType: context.getIconForType
+    getIconForType: context.getIconForType,
+    mergeDevices: context.mergeDevices
 };
 
 // Braces inside a line comment must not shift the body, so count with the
@@ -798,16 +799,7 @@ test('every provider that uses Plasmoid imports the plasmoid module', () => {
 // Cross-provider merging (main.qml)
 // ══════════════════════════════════════════════════════════════════════════
 
-const mergeDevices = readFunction('main.qml', 'mergeDevices', '.');
-const mergeDuplicate = readFunction('main.qml', 'mergeDuplicate', '.');
-// mergeDevices calls mergeDuplicate for a device two providers reported,
-// so both run in one context.
-const merge = (...providers) => {
-    const context = vm.createContext({ DeviceUtils });
-    vm.runInContext(`function mergeDuplicate(winner, later) {\n${mergeDuplicate}\n}`, context);
-    vm.runInContext(`function mergeDevices(deviceProviders) {\n${mergeDevices}\n}`, context);
-    return context.mergeDevices(providers);
-};
+const merge = (...providers) => DeviceUtils.mergeDevices(providers);
 // Loads the hidden list the way the applet does on startup, from the raw
 // strings Plasmoid.configuration holds.
 // The applet's own loadHiddenDevices, with the assignment it makes to the
