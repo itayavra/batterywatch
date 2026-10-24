@@ -463,43 +463,10 @@ PlasmoidItem {
             Repeater {
                 model: root.trayItems
 
-                GridLayout {
-                    rowSpacing: 2
-                    columnSpacing: 2
+                TrayDeviceItem {
+                    device: modelData
+                    batteryColor: root.batteryColor(modelData.percentage, modelData.charging)
                     flow: mainLayout.flow
-
-                    Kirigami.Icon {
-                        source: modelData.icon
-                        Layout.preferredWidth: Plasmoid.configuration.useCustomIconSize ? Plasmoid.configuration.customIconSize : Kirigami.Units.iconSizes.smallMedium
-                        Layout.preferredHeight: Plasmoid.configuration.useCustomIconSize ? Plasmoid.configuration.customIconSize : Kirigami.Units.iconSizes.smallMedium
-                        Layout.alignment: Qt.AlignCenter
-                    }
-
-                    PlasmaComponents.Label {
-                        // i18n: %1 is the charge percentage value; the trailing % is a literal percent sign.
-                        text: i18n("%1%", modelData.percentage)
-                        color: batteryColor(modelData.percentage, modelData.charging)
-                        font.family: Plasmoid.configuration.fontFamily !== "" ? Plasmoid.configuration.fontFamily : Kirigami.Theme.smallFont.family
-                        font.weight: Plasmoid.configuration.fontBold ? Plasmoid.configuration.fontWeight : Font.Normal
-                        font.italic: Plasmoid.configuration.fontItalic
-                        font.pixelSize: Plasmoid.configuration.useCustomFontSize ? Plasmoid.configuration.customFontSize : Kirigami.Theme.smallFont.pixelSize
-                        Layout.alignment: Qt.AlignCenter
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    PlasmaComponents.Label {
-                        visible: Plasmoid.configuration.showTrayChargingIndicator && modelData.charging
-                        text: "⚡︎"
-                        color: batteryColor(modelData.percentage, modelData.charging)
-                        font.family: Plasmoid.configuration.fontFamily !== "" ? Plasmoid.configuration.fontFamily : Kirigami.Theme.smallFont.family
-                        font.weight: Plasmoid.configuration.fontBold ? Plasmoid.configuration.fontWeight : Font.Normal
-                        font.italic: Plasmoid.configuration.fontItalic
-                        font.pixelSize: Plasmoid.configuration.useCustomFontSize ? Plasmoid.configuration.customFontSize : Kirigami.Theme.smallFont.pixelSize
-                        Layout.alignment: Qt.AlignCenter
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
                 }
             }
         }
