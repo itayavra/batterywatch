@@ -14,7 +14,10 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, 'DeviceUtils.js'), 'utf8'),
 const DeviceUtils = {
     canonicalSerial: context.canonicalSerial,
     deviceIdentity: context.deviceIdentity,
-    getIconForType: context.getIconForType
+    getIconForType: context.getIconForType,
+    mergeDevices: context.mergeDevices,
+    findLowBatteryAlerts: context.findLowBatteryAlerts,
+    validateDevice: context.validateDevice
 };
 
 // Braces inside a line comment must not shift the body, so count with the
@@ -798,16 +801,7 @@ test('every provider that uses Plasmoid imports the plasmoid module', () => {
 // Cross-provider merging (main.qml)
 // ══════════════════════════════════════════════════════════════════════════
 
-const mergeDevices = readFunction('main.qml', 'mergeDevices', '.');
-const mergeDuplicate = readFunction('main.qml', 'mergeDuplicate', '.');
-// mergeDevices calls mergeDuplicate for a device two providers reported,
-// so both run in one context.
-const merge = (...providers) => {
-    const context = vm.createContext({ DeviceUtils });
-    vm.runInContext(`function mergeDuplicate(winner, later) {\n${mergeDuplicate}\n}`, context);
-    vm.runInContext(`function mergeDevices(deviceProviders) {\n${mergeDevices}\n}`, context);
-    return context.mergeDevices(providers);
-};
+const merge = (...providers) => DeviceUtils.mergeDevices(providers);
 // Loads the hidden list the way the applet does on startup, from the raw
 // strings Plasmoid.configuration holds.
 // The applet's own loadHiddenDevices, with the assignment it makes to the
@@ -962,4 +956,147 @@ test('a multi-battery entry is not filled with single-battery fields', () => {
     const merged = merge([winner], [later]);
     assert.equal(merged[0].batteries.length, 1, 'the batteries array was disturbed');
     assert.equal(merged[0].percentage, undefined);
+});
+
+const updateHidDevices = (entries, previous = []) => {
+    const context = vm.createContext({
+        root: { pendingData: entries }, devices: previous, emptyList: [],
+        wirelessType: 1, DeviceUtils, i18n: s => s
+    });
+    vm.runInContext(`function updateDevices() {\n${readFunction('HIDDevicesProvider.qml', 'updateDevices')}\n}`, context);
+    context.updateDevices();
+    return context.devices;
+};
+
+test('HID preserves unknown charging and both known boolean states', () => {
+    for (const charging of [null, undefined, false, true]) {
+        const devices = updateHidDevices([{ name: 'Glorious', serial: 'mouse', percentage: 10, charging }]);
+        assert.equal(devices[0].charging, charging);
+    }
+});
+
+test('HID publishes transitions between unknown and known charging', () => {
+    let devices = updateHidDevices([{ serial: 'mouse', percentage: 10, charging: null }]);
+    devices = updateHidDevices([{ serial: 'mouse', percentage: 10, charging: false }], devices);
+    assert.equal(devices[0].charging, false);
+    devices = updateHidDevices([{ serial: 'mouse', percentage: 10, charging: null }], devices);
+    assert.equal(devices[0].charging, null);
+});
+
+test('a later provider can fill charging left unknown by the HID provider', () => {
+    const hid = updateHidDevices([{ name: 'Glorious', serial: 'mouse', percentage: 10, charging: null }]);
+    const merged = merge(hid, [{ serial: 'mouse', percentage: 11, charging: true }]);
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].percentage, 10);
+    assert.equal(merged[0].charging, true);
+    assert.equal(hid[0].charging, null);
+});
+
+// Keeps `notified` updated in place across calls, the way the applet carries it.
+function checkNotifications(devices, notified = {}) {
+    const result = DeviceUtils.findLowBatteryAlerts(devices, [], 20, notified);
+    for (const key of Object.keys(notified)) delete notified[key];
+    Object.assign(notified, result.notified);
+    return result.alerts;
+}
+
+test('low-battery notifications skip only batteries known to be charging', () => {
+    for (const charging of [null, undefined, true, false]) {
+        const alerts = checkNotifications([{ serial: 'mouse', percentage: 10, charging }]);
+        assert.equal(alerts.length, charging === true ? 0 : 1);
+    }
+});
+
+test('multi-battery notifications check charging state per battery', () => {
+    const alerts = checkNotifications([{ serial: 'headphones', batteries: [
+        { label: 'Left', percentage: 10, charging: null },
+        { label: 'Right', percentage: 10, charging: false },
+        { label: 'Case', percentage: 10, charging: true }
+    ] }]);
+    assert.equal(alerts.length, 2);
+});
+
+test('learning a charging state does not repeat an existing low-battery alert', () => {
+    const notified = {};
+    const device = { serial: 'mouse', percentage: 10, charging: null };
+    assert.equal(checkNotifications([device], notified).length, 1);
+    assert.equal(checkNotifications([{ ...device, charging: false }], notified).length, 0);
+    assert.equal(checkNotifications([{ ...device, charging: false }], notified).length, 0);
+    checkNotifications([{ ...device, percentage: 80, charging: false }], notified);
+    assert.equal(checkNotifications([{ ...device, charging: false }], notified).length, 1);
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// Every provider builds devices the popup and tray can render
+// ══════════════════════════════════════════════════════════════════════════
+
+// Runs a provider function that ends by assigning `devices`, and returns it.
+const buildDevices = (file, name, scope) => {
+    const context = vm.createContext({
+        devices: [], emptyList: [], wirelessType: 1, bluetoothType: 2, wiredType: 0,
+        DeviceUtils, i18n: s => s, unpairSource: {}, btDisconnectSource: {}, ...scope
+    });
+    vm.runInContext(`function ${name}() {\n${readFunction(file, name)}\n}`, context);
+    context[name]();
+    return Array.from(context.devices);
+};
+
+const assertValid = (devices, label) => {
+    assert.ok(devices.length > 0, `${label} produced no devices`);
+    for (const device of devices) {
+        assert.deepEqual(Array.from(DeviceUtils.validateDevice(device)), [], `${label}: ${device && device.name}`);
+    }
+};
+
+test('UPower builds valid devices from every captured upower shape', () => {
+    const shapes = [UPOWER_BT_HIDPP, UPOWER_DONGLE_HIDPP, UPOWER_BLUEZ, UPOWER_HIDPP_ON, UPOWER_MXMASTER];
+    const devices = shapes.map((output, i) => parseUpower(output, `/org/freedesktop/UPower/devices/test_${i}`));
+    assertValid(devices.filter(Boolean), 'upower');
+});
+
+test('Bluez builds a valid device from bluetoothctl info', () => {
+    assertValid([parseBluez(BLUEZ_INFO)], 'bluez');
+});
+
+test('HID builds valid devices, including a blocked one', () => {
+    assertValid(updateHidDevices([
+        { name: 'Glorious', serial: 'mouse', percentage: 10, charging: null, deviceType: 'mouse' },
+        { name: 'Locked', serial: 'locked', blocked: true, deviceType: 'keyboard', unblock_command: 'sudo true' },
+    ]), 'hid');
+});
+
+test('Solaar builds valid devices, including a Bluetooth one with a disconnect action', () => {
+    const devices = buildDevices('SolaarProvider.qml', 'updateDevices', {
+        root: { pendingData: [
+            { name: 'M305', serial: 'F90D4F0C', percentage: 50, charging: false, deviceType: 'mouse' },
+            { name: 'MX Master', serial: 'cb:6a:b2:6c:73:47', percentage: 90, deviceType: 'mouse', connectionType: 2, bluetooth_address: 'cb_6a_b2_6c_73_47' },
+        ] }
+    });
+    assertValid(devices, 'solaar');
+});
+
+test('KDE Connect builds valid devices', () => {
+    const devices = buildDevices('KDEConnectProvider.qml', 'updateDevices', {
+        deviceData: { id1: { name: "Bob's Phone", charge: 75, charging: false, type: 'phone' }, id2: { charge: 20 } }
+    });
+    assertValid(devices, 'kdeconnect');
+});
+
+test('OpenRazer builds valid devices', () => {
+    const devices = buildDevices('OpenRazerProvider.qml', 'updateOpenRazerDevices', {
+        deviceData: { AAA: { name: 'Viper Ultimate', battery: 85, charging: true, type: 'mouse', firmware: 'v1.0' } }
+    });
+    assertValid(devices, 'openrazer');
+});
+
+test('Companion builds valid single- and multi-battery devices', () => {
+    const parse = data => callFunction(readFunction('CompanionProvider.qml', 'parseCompanionDevice'),
+        'parseCompanionDevice', 'data', { DeviceUtils, i18n: s => s }, data);
+    assertValid([
+        parse({ id: 'AA:BB', name: 'Phone', device_type: 'phone', percentage: 80 }),
+        parse({ id: 'CC:DD', name: 'AirPods', device_type: 'headphones', batteries: [
+            { label: 'Left', percentage: 50, charging: false },
+            { label: 'Case', percentage: 90, charging: true },
+        ] }),
+    ], 'companion');
 });
