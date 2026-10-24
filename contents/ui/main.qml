@@ -8,6 +8,7 @@ import org.kde.plasma.plasma5support 2.0 as P5Support
 import org.kde.notification
 import "providers"
 import "DeviceUtils.js" as DeviceUtils
+import "TestDevices.js" as TestDevices
 
 PlasmoidItem {
     id: root
@@ -62,7 +63,7 @@ PlasmoidItem {
     property bool debugMode: Plasmoid.configuration.debugMode
     // Debug mode: show the static test devices AND real provider devices
     // (the HID provider simulates a blocked device when debug is on)
-    property var allDevices: debugMode ? testDevices.concat(realDevices) : realDevices
+    property var allDevices: debugMode ? TestDevices.testDevices.concat(realDevices) : realDevices
 
     //Notification
     property bool notificationEnabled: Plasmoid.configuration.notificationEnabled !== undefined ? Plasmoid.configuration.notificationEnabled : false
@@ -475,56 +476,4 @@ PlasmoidItem {
             }
         }
     }
-    // ═══════════════════════════════════════════════════════════════════════
-    // DEBUG
-    // ═══════════════════════════════════════════════════════════════════════
-
-    // A bunch of fake devices for debugging
-    property var testDevices: [
-
-        // Headphones with 3 batteries
-        {
-            name: "Headphones",
-            serial: "test-1",
-            icon: "audio-headphones",
-            batteries: [
-                {
-                    label: "Left",
-                    percentage: 50,
-                    charging: true
-                },
-                {
-                    label: "Right",
-                    percentage: 30,
-                    charging: false
-                },
-                {
-                    label: "Case",
-                    percentage: 10,
-                    charging: false
-                }
-            ]
-        },
-        {
-            name: "Mouse",
-            serial: "Mouse-test",
-            icon: "input-mouse",
-            percentage: 50,
-            charging: true
-        },
-        {
-            name: "Keyboard",
-            serial: "Keyboard-test-warning",
-            icon: "input-keyboard",
-            percentage: 30,
-            charging: false
-        },
-        {
-            name: "Gamepad",
-            serial: "Gamepad-test-critical",
-            icon: "input-gamepad",
-            percentage: 10,
-            charging: false
-        }
-    ]
 }

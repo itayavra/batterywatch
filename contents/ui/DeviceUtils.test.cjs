@@ -237,3 +237,66 @@ test('findLowBatteryAlerts does not modify the notified map it is given', () => 
     lowAlerts([{ serial: 'a', percentage: 5 }], { notified });
     assert.deepEqual(notified, {});
 });
+
+// ── validateDevice ────────────────────────────────────────────────────────
+
+const validateDevice = device => Array.from(context.validateDevice(device));
+const goodDevice = () => ({ name: 'Mouse', serial: 'a', icon: 'input-mouse', percentage: 50, charging: false });
+
+test('validateDevice accepts a complete device', () => {
+    assert.deepEqual(validateDevice(goodDevice()), []);
+});
+
+test('validateDevice accepts unknown charging, a blocked device without a reading, and an objectPath identity', () => {
+    assert.deepEqual(validateDevice({ ...goodDevice(), charging: null }), []);
+    assert.deepEqual(validateDevice({ name: 'HID', serial: 'x', icon: 'i', blocked: true }), []);
+    assert.deepEqual(validateDevice({ ...goodDevice(), serial: '', objectPath: '/p' }), []);
+    assert.deepEqual(validateDevice({ ...goodDevice(), name: '' }), []);
+});
+
+test('validateDevice reports each missing or malformed top-level field', () => {
+    const cases = [
+        [{ ...goodDevice(), name: undefined }, /name/],
+        [{ ...goodDevice(), serial: '' }, /serial or an objectPath/],
+        [{ ...goodDevice(), icon: undefined }, /icon/],
+        [{ ...goodDevice(), percentage: null }, /percentage/],
+        [{ ...goodDevice(), percentage: 101 }, /percentage/],
+        [{ ...goodDevice(), percentage: '50' }, /percentage/],
+        [{ ...goodDevice(), charging: 'yes' }, /charging/],
+        [{ ...goodDevice(), batteries: 'x' }, /batteries must be an array/],
+        [null, /not an object/],
+    ];
+    for (const [device, pattern] of cases) {
+        const problems = validateDevice(device);
+        assert.ok(problems.some(p => pattern.test(p)), `${JSON.stringify(device)} -> ${problems}`);
+    }
+});
+
+test('validateDevice checks every battery of a multi-battery device', () => {
+    const device = { name: 'Pods', serial: 'p', icon: 'i', batteries: [
+        { label: 'Left', percentage: 50, charging: false },
+        { percentage: 50 },
+        { label: 'Case', percentage: null },
+    ] };
+    const problems = validateDevice(device);
+    assert.equal(problems.length, 2);
+    assert.ok(problems.some(p => p.includes('batteries[1] needs a label')));
+    assert.ok(problems.some(p => p.includes('batteries[2].percentage')));
+});
+
+test('a multi-battery device needs no top-level percentage', () => {
+    const device = { name: 'Pods', serial: 'p', icon: 'i', batteries: [{ label: 'Left', percentage: 50 }] };
+    assert.deepEqual(validateDevice(device), []);
+});
+
+// ── the built-in debug devices ────────────────────────────────────────────
+
+test('every built-in test device passes validateDevice', () => {
+    const testContext = vm.createContext({});
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'TestDevices.js'), 'utf8'), testContext);
+    const devices = Array.from(testContext.testDevices);
+    assert.ok(devices.length > 0);
+    for (const device of devices) {
+        assert.deepEqual(validateDevice(device), [], `test device ${device.name}`);
+    }
+});

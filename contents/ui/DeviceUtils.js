@@ -228,3 +228,44 @@ function findLowBatteryAlerts(devices, muted, threshold, notified) {
 
     return { alerts: alerts, notified: next };
 }
+
+// Checks a device against the shape the widget relies on and returns a list of
+// problems (empty when the device is fine). Used by tests so a provider that
+// stops filling a field is caught before it reaches the popup.
+function validateDevice(device) {
+    var problems = []
+    if (!device || typeof device !== "object")
+        return ["device is not an object"]
+
+    // May be empty (UPower devices without a model); the popup falls back to "Unknown Device"
+    if (typeof device.name !== "string")
+        problems.push("name must be a string")
+    if (!deviceIdentity(device))
+        problems.push("needs a serial or an objectPath to identify it")
+    if (typeof device.icon !== "string" || device.icon === "")
+        problems.push("icon must be a non-empty string")
+    if (device.charging != null && typeof device.charging !== "boolean")
+        problems.push("charging must be a boolean or null")
+
+    var isPercentage = function (value) {
+        return typeof value === "number" && isFinite(value) && value >= 0 && value <= 100
+    }
+
+    if (device.batteries != null && !Array.isArray(device.batteries)) {
+        problems.push("batteries must be an array")
+    } else if (device.batteries && device.batteries.length > 0) {
+        // The readings live in batteries, so the top-level percentage is not required
+        device.batteries.forEach(function (battery, i) {
+            if (!battery || typeof battery.label !== "string" || battery.label === "")
+                problems.push("batteries[" + i + "] needs a label")
+            if (!battery || !isPercentage(battery.percentage))
+                problems.push("batteries[" + i + "].percentage must be a number from 0 to 100")
+            if (battery && battery.charging != null && typeof battery.charging !== "boolean")
+                problems.push("batteries[" + i + "].charging must be a boolean or null")
+        })
+    } else if (device.blocked !== true && !isPercentage(device.percentage)) {
+        problems.push("percentage must be a number from 0 to 100")
+    }
+
+    return problems
+}
