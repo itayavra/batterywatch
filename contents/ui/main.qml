@@ -17,47 +17,23 @@ PlasmoidItem {
     // PROVIDERS
     // ═══════════════════════════════════════════════════════════════════════
 
-    UPowerProvider {
-        id: upowerProvider
-    }
-
-    BluezProvider {
-        id: bluezProvider
-    }
-
-    CompanionProvider {
-        id: companionProvider
-    }
-
-    OpenLinkHubProvider {
-        id: openLinkHubProvider
-    }
-
-    OpenRazerProvider {
-        id: openRazerProvider
-    }
-
-    KDEConnectProvider {
-        id: kdeConnectProvider
-    }
-
-    HIDDevicesProvider {
-        id: hidDevicesProvider
-    }
-
-    SolaarProvider {
-        id: solaarProvider
-    }
-
-    HeadsetControlProvider {
-        id: headsetControlProvider
-    }
-
-    // List of providers (in priority order).
+    // Declaration order is the priority order.
     // Vendor-specific sources come first, since each talks to its own devices
     // with maintained per-model knowledge
     // The HID helper is the last-resort direct reader.
-    property var providers: [companionProvider, openLinkHubProvider, openRazerProvider, kdeConnectProvider, headsetControlProvider, solaarProvider, hidDevicesProvider, bluezProvider, upowerProvider]
+    ProviderRegistry {
+        id: providers
+
+        CompanionProvider {}
+        OpenLinkHubProvider {}
+        OpenRazerProvider {}
+        KDEConnectProvider {}
+        HeadsetControlProvider {}
+        SolaarProvider {}
+        HIDDevicesProvider {}
+        BluezProvider {}
+        UPowerProvider {}
+    }
 
     // Debug mode
     property bool debugMode: Plasmoid.configuration.debugMode
@@ -75,7 +51,7 @@ PlasmoidItem {
     // ═══════════════════════════════════════════════════════════════════════
 
     // Merged devices from all providers
-    property var realDevices: DeviceUtils.mergeDevices(providers.map(p => p.devices))
+    property var realDevices: DeviceUtils.mergeDevices(providers.devicesByPriority())
     property var hiddenDevices: []
     property var notificationMutedDevices: []
     property var notifiedLowBattery: ({})
@@ -315,16 +291,6 @@ PlasmoidItem {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // DEVICE ACTIONS
-    // ═══════════════════════════════════════════════════════════════════════
-
-    function refreshDevices() {
-        for (var i = 0; i < providers.length; i++) {
-            providers[i].refresh();
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
     // COMPACT REPRESENTATION (System Tray)
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -422,9 +388,7 @@ PlasmoidItem {
                         text: i18n("Refresh devices")
                     }
 
-                    onClicked: {
-                        refreshDevices();
-                    }
+                    onClicked: providers.refreshAll()
                 }
             }
 
