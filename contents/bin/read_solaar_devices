@@ -810,25 +810,20 @@ def simulate():
     ]
 
 
-def main():
-    if SIMULATE:
-        print(json.dumps(simulate()))
-        return
-
+def read_real():
+    """Real devices (a list), or an error object when Solaar is unusable."""
     # A cached `flatpak` runner skips host discovery entirely: the last good
     # run was inside Solaar's sandbox. If it turned stale, collect_flatpak()
     # clears it and this falls through to the normal host path.
     if cached_runner() == "flatpak":
         result = collect_flatpak()
         if result is not None:
-            print(json.dumps(result))
-            return
+            return result
 
     unavailable = None
     runtime_error = None
     try:
-        print(json.dumps(collect()))
-        return
+        return collect()
     except SolaarNotImportable as error:
         unavailable = error
         debug(f"host Solaar unusable: {error}")
@@ -840,12 +835,19 @@ def main():
     # to its own Python instead of the host one that cannot see the library.
     result = collect_flatpak()
     if result is not None:
-        print(json.dumps(result))
-        return
+        return result
     if runtime_error is not None:
-        print(json.dumps({"error": "solaar-error", "hint": repr(runtime_error)}))
-    else:
-        print(json.dumps({"error": "solaar-missing", "hint": str(unavailable)}))
+        return {"error": "solaar-error", "hint": repr(runtime_error)}
+    return {"error": "solaar-missing", "hint": str(unavailable)}
+
+
+def main():
+    result = read_real()
+    if SIMULATE:
+        # Testing mode adds the fake devices to the real ones.
+        real = result if isinstance(result, list) else []
+        result = simulate() + real
+    print(json.dumps(result))
 
 
 if __name__ == "__main__":

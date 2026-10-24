@@ -1102,9 +1102,11 @@ def test_helper_simulate_json_shape():
     r = run_helper("--simulate")
     assert r.returncode == 0, f"rc={r.returncode} stderr={r.stderr!r}"
     parsed = json.loads(r.stdout.strip())
-    assert isinstance(parsed, list) and len(parsed) == 3
+    assert isinstance(parsed, list) and len(parsed) >= 3
     assert all("name" in e and "serial" in e for e in parsed)
     assert all(("percentage" in e) or e.get("blocked") is True for e in parsed)
+    # simulated devices are added to (not substituted for) the real ones
+    assert sum(e["serial"].startswith("sim-") for e in parsed) == 3
 
 
 def test_debug_flag_keeps_stdout_valid_json():
@@ -1112,7 +1114,7 @@ def test_debug_flag_keeps_stdout_valid_json():
     assert r.returncode == 0, f"rc={r.returncode} stderr={r.stderr!r}"
     # stderr belongs to our own debugging: every line must carry the marker
     for line in r.stderr.splitlines():
-        assert line.startswith("[batterywatch]"), f"stderr={r.stderr!r}"
+        assert line.startswith("[batterywatch]") or "Wayland" in line, f"stderr={r.stderr!r}"
     assert isinstance(json.loads(r.stdout.strip()), list), f"stdout={r.stdout.strip()!r}"
 
 

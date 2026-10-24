@@ -1204,11 +1204,10 @@ def main():
     if _DEBUG:
         # Strip the flag so the logic below sees the same argv as without it.
         sys.argv.pop(sys.argv.index("--debug"))
-    if len(sys.argv) > 1 and sys.argv[1] == "--simulate":
-        print(json.dumps(_simulate()))
-        sys.exit(0)
+    simulate = len(sys.argv) > 1 and sys.argv[1] == "--simulate"
 
-    parts = []
+    # Testing mode adds the fake devices to the real ones.
+    parts = _simulate() if simulate else []
     for dev in find_devices():
         entry = _device_entry(dev)
         if entry is not None:
