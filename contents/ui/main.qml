@@ -8,6 +8,7 @@ import org.kde.plasma.plasma5support 2.0 as P5Support
 import org.kde.notification
 import "providers"
 import "DeviceUtils.js" as DeviceUtils
+import "TestDevices.js" as TestDevices
 
 PlasmoidItem {
     id: root
@@ -16,53 +17,29 @@ PlasmoidItem {
     // PROVIDERS
     // ═══════════════════════════════════════════════════════════════════════
 
-    UPowerProvider {
-        id: upowerProvider
-    }
-
-    BluezProvider {
-        id: bluezProvider
-    }
-
-    CompanionProvider {
-        id: companionProvider
-    }
-
-    OpenLinkHubProvider {
-        id: openLinkHubProvider
-    }
-
-    OpenRazerProvider {
-        id: openRazerProvider
-    }
-
-    KDEConnectProvider {
-        id: kdeConnectProvider
-    }
-
-    HIDDevicesProvider {
-        id: hidDevicesProvider
-    }
-
-    SolaarProvider {
-        id: solaarProvider
-    }
-
-    HeadsetControlProvider {
-        id: headsetControlProvider
-    }
-
-    // List of providers (in priority order).
+    // Declaration order is the priority order.
     // Vendor-specific sources come first, since each talks to its own devices
     // with maintained per-model knowledge
     // The HID helper is the last-resort direct reader.
-    property var providers: [companionProvider, openLinkHubProvider, openRazerProvider, kdeConnectProvider, headsetControlProvider, solaarProvider, hidDevicesProvider, bluezProvider, upowerProvider]
+    ProviderRegistry {
+        id: providers
+
+        CompanionProvider {}
+        OpenLinkHubProvider {}
+        OpenRazerProvider {}
+        KDEConnectProvider {}
+        HeadsetControlProvider {}
+        SolaarProvider {}
+        HIDDevicesProvider {}
+        BluezProvider {}
+        UPowerProvider {}
+    }
 
     // Debug mode
     property bool debugMode: Plasmoid.configuration.debugMode
     // Debug mode: show the static test devices AND real provider devices
     // (the HID provider simulates a blocked device when debug is on)
-    property var allDevices: debugMode ? testDevices.concat(realDevices) : realDevices
+    property var allDevices: debugMode ? TestDevices.testDevices.concat(realDevices) : realDevices
 
     //Notification
     property bool notificationEnabled: Plasmoid.configuration.notificationEnabled !== undefined ? Plasmoid.configuration.notificationEnabled : false
@@ -74,10 +51,10 @@ PlasmoidItem {
     // ═══════════════════════════════════════════════════════════════════════
 
     // Merged devices from all providers
-    property var realDevices: mergeDevices(providers.map(p => p.devices))
+    property var realDevices: DeviceUtils.mergeDevices(providers.devicesByPriority())
     property var hiddenDevices: []
     property var notificationMutedDevices: []
-    property var notifiedLowBattery: []
+    property var notifiedLowBattery: ({})
 
     property int visibleDeviceCount: {
         var count = 0;
@@ -95,7 +72,7 @@ PlasmoidItem {
 
     // Tray items: flattened list for compact representation
     // For multi-battery devices, only shows batteries with showInTray=true
-    property var trayItems: buildTrayItems(allDevices, hiddenDevices)
+    property var trayItems: DeviceUtils.buildTrayItems(allDevices, hiddenDevices)
 
     // The exact command for this blocked device, from the helper (single source
     // of truth). The widget never installs anything itself - the user runs this
@@ -151,180 +128,24 @@ PlasmoidItem {
         checkBatteryNotifications()
     }
 
-    function isNotificationEnabled(device) {
-        var identity = DeviceUtils.deviceIdentity(device);
-
-        if (!identity) {
-            return false;
-        }
-
-        return notificationMutedDevices.indexOf(identity) === -1;
-    }
-
     function checkBatteryNotifications() {
         if (!notificationEnabled) {
             return;
         }
 
-        var devices = allDevices || [];
-        for (var i = 0; i < devices.length; i++) {
-            var device = devices[i];
-            if(!isNotificationEnabled(device)) {
-                continue;
-            }
+        var result = DeviceUtils.findLowBatteryAlerts(allDevices || [], notificationMutedDevices, notificationThreshold, notifiedLowBattery);
+        notifiedLowBattery = result.notified;
 
-            var identity = DeviceUtils.deviceIdentity(device);
-            if (!identity) {
-                continue;
-            }
-
-            var batteries = [];
-
-            if (device.batteries && device.batteries.length > 0) {
-                batteries = device.batteries;
-            } else if (device.percentage !== undefined
-                && device.percentage !== null) {
-                batteries = [{
-                    percentage: device.percentage,
-                    label: "",
-                    charging: device.charging
-                }];
-            }
-
-            for (var j = 0; j < batteries.length; j++) {
-                var battery = batteries[j];
-                var percentage = Number(battery.percentage);
-
-                if (!isFinite(percentage)) {
-                    continue;
-                }
-
-                if (battery.charging === true) {
-                    continue;
-                }
-
-                var label = battery.label || "";
-                var key = identity + ":" + (label || j);
-
-                //greater than 0 since some devices show 0% when turned off.
-                if (percentage > notificationThreshold || percentage <= 0) {
-                    delete notifiedLowBattery[key];
-                    continue;
-                } 
-
-                if (!notifiedLowBattery[key]) {
-                    notifiedLowBattery[key] = true;
-
-                    batteryNotificationComponent.createObject(root, {
-                        title: i18n("Low battery"),
-                        text: i18n("%1%2 has %3% battery remaining",
-                            device.name || i18n("Device"),
-                            label ? " (" + label + ")" : "",
-                            percentage)
-                    }).sendEvent();
-                }
-            }
+        for (var i = 0; i < result.alerts.length; i++) {
+            var alert = result.alerts[i];
+            batteryNotificationComponent.createObject(root, {
+                title: i18n("Low battery"),
+                text: i18n("%1%2 has %3% battery remaining",
+                    alert.name || i18n("Device"),
+                    alert.label ? " (" + alert.label + ")" : "",
+                    alert.percentage)
+            }).sendEvent();
         }
-    }
-
-    function buildTrayItems(devices, hidden) {
-        var items = [];
-        for (var i = 0; i < devices.length; i++) {
-            var device = devices[i];
-            if (hidden.indexOf(DeviceUtils.deviceIdentity(device)) !== -1)
-                continue;
-
-            // Devices whose battery needs a permission we don't have yet: keep
-            // them out of the tray; the popup shows the copy-command action.
-            if (device.blocked === true)
-                continue;
-
-            // Multi-battery device (e.g., AirPods)
-            if (device.batteries && device.batteries.length > 1) {
-                for (var j = 0; j < device.batteries.length; j++) {
-                    var bat = device.batteries[j];
-
-                    // Skip batteries marked as not for tray (e.g., Case)
-                    if (bat.showInTray === false)
-                        continue;
-                    items.push({
-                        icon: device.icon,
-                        percentage: bat.percentage,
-                        label: bat.label,
-                        deviceSerial: device.serial,
-                        charging: bat.charging
-                    });
-                }
-            } else {
-                // Single battery device
-                items.push({
-                    icon: device.icon,
-                    percentage: device.percentage,
-                    label: null,
-                    deviceSerial: device.serial,
-                    charging: device.charging
-                });
-            }
-        }
-        return items;
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // DEVICE MERGING
-    // ═══════════════════════════════════════════════════════════════════════
-
-    // One entry per device reported by two providers: the earlier entry stays,
-    // the later one replaces a blocked placeholder or fills missing fields.
-    function mergeDuplicate(winner, later) {
-        if (winner.blocked === true)
-            return later.percentage != null ? later : winner;
-        // A placeholder never replaces data; a multi-battery entry's readings
-        // live in batteries, so percentage and charging have nothing to fill
-        if (later.blocked === true || (winner.batteries && winner.batteries.length > 0))
-            return winner;
-        if (winner.percentage == null && later.percentage != null)
-            winner = Object.assign({}, winner, {
-                percentage: later.percentage
-            });
-        if (winner.charging == null && later.charging != null)
-            winner = Object.assign({}, winner, {
-                charging: later.charging
-            });
-        return winner;
-    }
-
-    // Merge devices from multiple providers, avoiding duplicates
-    // deviceProviders: array of device arrays in priority order (first = highest priority)
-    function mergeDevices(deviceProviders) {
-        var merged = [];
-        var seenIds = {};
-
-        for (var providerIdx = 0; providerIdx < deviceProviders.length; providerIdx++) {
-            var devices = deviceProviders[providerIdx];
-
-            for (var i = 0; i < devices.length; i++) {
-                var device = devices[i];
-                var id = DeviceUtils.deviceIdentity(device);
-                if (!id)
-                    continue;
-
-                if (seenIds[id] === undefined) {
-                    merged.push(device);
-                    seenIds[id] = merged.length - 1;
-                } else {
-                    merged[seenIds[id]] = mergeDuplicate(merged[seenIds[id]], device);
-                }
-            }
-        }
-
-        // Sort by name
-        merged.sort((a, b) => {
-            var nameA = a.name || "";
-            var nameB = b.name || "";
-            return nameA.localeCompare(nameB);
-        });
-
-        return merged;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -470,16 +291,6 @@ PlasmoidItem {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // DEVICE ACTIONS
-    // ═══════════════════════════════════════════════════════════════════════
-
-    function refreshDevices() {
-        for (var i = 0; i < providers.length; i++) {
-            providers[i].refresh();
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
     // COMPACT REPRESENTATION (System Tray)
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -521,43 +332,10 @@ PlasmoidItem {
             Repeater {
                 model: root.trayItems
 
-                GridLayout {
-                    rowSpacing: 2
-                    columnSpacing: 2
+                TrayDeviceItem {
+                    device: modelData
+                    batteryColor: root.batteryColor(modelData.percentage, modelData.charging)
                     flow: mainLayout.flow
-
-                    Kirigami.Icon {
-                        source: modelData.icon
-                        Layout.preferredWidth: Plasmoid.configuration.useCustomIconSize ? Plasmoid.configuration.customIconSize : Kirigami.Units.iconSizes.smallMedium
-                        Layout.preferredHeight: Plasmoid.configuration.useCustomIconSize ? Plasmoid.configuration.customIconSize : Kirigami.Units.iconSizes.smallMedium
-                        Layout.alignment: Qt.AlignCenter
-                    }
-
-                    PlasmaComponents.Label {
-                        // i18n: %1 is the charge percentage value; the trailing % is a literal percent sign.
-                        text: i18n("%1%", modelData.percentage)
-                        color: batteryColor(modelData.percentage, modelData.charging)
-                        font.family: Plasmoid.configuration.fontFamily !== "" ? Plasmoid.configuration.fontFamily : Kirigami.Theme.smallFont.family
-                        font.weight: Plasmoid.configuration.fontBold ? Plasmoid.configuration.fontWeight : Font.Normal
-                        font.italic: Plasmoid.configuration.fontItalic
-                        font.pixelSize: Plasmoid.configuration.useCustomFontSize ? Plasmoid.configuration.customFontSize : Kirigami.Theme.smallFont.pixelSize
-                        Layout.alignment: Qt.AlignCenter
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    PlasmaComponents.Label {
-                        visible: Plasmoid.configuration.showTrayChargingIndicator && modelData.charging
-                        text: "⚡︎"
-                        color: batteryColor(modelData.percentage, modelData.charging)
-                        font.family: Plasmoid.configuration.fontFamily !== "" ? Plasmoid.configuration.fontFamily : Kirigami.Theme.smallFont.family
-                        font.weight: Plasmoid.configuration.fontBold ? Plasmoid.configuration.fontWeight : Font.Normal
-                        font.italic: Plasmoid.configuration.fontItalic
-                        font.pixelSize: Plasmoid.configuration.useCustomFontSize ? Plasmoid.configuration.customFontSize : Kirigami.Theme.smallFont.pixelSize
-                        Layout.alignment: Qt.AlignCenter
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
                 }
             }
         }
@@ -610,9 +388,7 @@ PlasmoidItem {
                         text: i18n("Refresh devices")
                     }
 
-                    onClicked: {
-                        refreshDevices();
-                    }
+                    onClicked: providers.refreshAll()
                 }
             }
 
@@ -631,188 +407,24 @@ PlasmoidItem {
                     Repeater {
                         model: root.allDevices
 
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 0
+                        DeviceRow {
+                            device: modelData
+                            rowIndex: index
+                            rowCount: root.allDevices.length
+                            batteryColor: root.batteryColor
+                            hidden: root.hiddenDevices.indexOf(DeviceUtils.deviceIdentity(modelData)) !== -1
+                            notificationMuted: root.notificationMutedDevices.indexOf(DeviceUtils.deviceIdentity(modelData)) !== -1
+                            notificationEnabled: root.notificationEnabled
+                            commandCopied: root.commandCopied
 
-                            // Store reference to device for nested components
-                            property var device: modelData
-                            property bool hasMultipleBatteries: device.batteries && device.batteries.length > 1
-
-                            Item {
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: device.blocked === true ? Kirigami.Units.gridUnit * 5 : Kirigami.Units.gridUnit * 4
-                                Layout.topMargin: Kirigami.Units.smallSpacing
-                                Layout.bottomMargin: Kirigami.Units.smallSpacing
-
-                                RowLayout {
-                                    anchors.fill: parent
-                                    spacing: Kirigami.Units.smallSpacing
-
-                                    Kirigami.Icon {
-                                        source: device.icon
-                                        Layout.preferredWidth: Kirigami.Units.iconSizes.medium
-                                        Layout.preferredHeight: Kirigami.Units.iconSizes.medium
-                                        Layout.alignment: Qt.AlignVCenter
-                                    }
-
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        Layout.alignment: Qt.AlignVCenter
-                                        spacing: 2
-
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: Kirigami.Units.smallSpacing
-
-                                            Kirigami.Icon {
-                                                visible: device.blocked === true
-                                                source: "object-locked"
-                                                Layout.preferredWidth: Kirigami.Units.iconSizes.small
-                                                Layout.preferredHeight: Kirigami.Units.iconSizes.small
-                                                Layout.alignment: Qt.AlignVCenter
-                                            }
-
-                                            PlasmaComponents.Label {
-                                                text: device.name || i18n("Unknown Device")
-                                                font.bold: true
-                                                Layout.fillWidth: true
-                                                elide: Text.ElideRight
-                                            }
-                                        }
-
-                                        PlasmaComponents.Label {
-                                            text: device.blocked === true ? i18n("Permission needed - run the command in a terminal") : device.serial
-                                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                                            color: device.blocked === true ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.disabledTextColor
-                                            Layout.fillWidth: true
-                                            elide: Text.ElideRight
-                                            wrapMode: device.blocked === true ? Text.WordWrap : Text.NoWrap
-                                        }
-
-                                        // Multi-battery row (shown under MAC address)
-                                        RowLayout {
-                                            visible: hasMultipleBatteries
-                                            Layout.fillWidth: true
-                                            spacing: Kirigami.Units.largeSpacing
-
-                                            Repeater {
-                                                model: hasMultipleBatteries ? device.batteries : []
-
-                                                PlasmaComponents.Label {
-                                                    textFormat: Text.RichText
-                                                    text: {
-                                                        var bat = modelData;
-                                                        var label = bat.label || i18n("Battery");
-                                                        var charging = bat.charging ? " ⚡" : "";
-                                                        var color = batteryColor(bat.percentage, bat.charging);
-                                                        // i18n: %1 is the battery label or simply the word, ‘Battery’. %2 is the charge percentage value.
-                                                        // %3 is a Unicode lightning symbol displayed when the device is charging.
-                                                        return i18n("%1: <span style=\"color:%4\">%2%</span>%3", label, bat.percentage, charging, color);
-                                                    }
-                                                    font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    RowLayout {
-                                        Layout.alignment: Qt.AlignVCenter
-
-                                        PlasmaComponents.ToolButton {
-                                            visible: typeof device.disconnect === "function"
-                                            icon.name: "network-disconnect"
-                                            text: i18n("Disconnect")
-                                            display: PlasmaComponents.AbstractButton.IconOnly
-                                            onClicked: device.disconnect()
-
-                                            PlasmaComponents.ToolTip {
-                                                text: device.disconnectTooltip || i18n("Disconnect device")
-                                            }
-
-                                            MouseArea {
-                                                anchors.fill: parent
-                                                hoverEnabled: true
-                                                cursorShape: Qt.PointingHandCursor
-                                                onPressed: mouse.accepted = false
-                                            }
-                                        }
-
-                                        PlasmaComponents.ToolButton {
-                                            visible: device.blocked !== true
-                                            icon.name: root.hiddenDevices.indexOf(DeviceUtils.deviceIdentity(device)) === -1 ? "view-visible" : "view-hidden"
-                                            text: root.hiddenDevices.indexOf(DeviceUtils.deviceIdentity(device)) === -1 ? i18n("Hide") : i18n("Show")
-                                            display: PlasmaComponents.AbstractButton.IconOnly
-                                            onClicked: toggleDeviceVisibility(device)
-
-                                            PlasmaComponents.ToolTip {
-                                                text: root.hiddenDevices.indexOf(DeviceUtils.deviceIdentity(device)) === -1 ? i18n("Hide from tray") : i18n("Show in tray")
-                                            }
-
-                                            MouseArea {
-                                                anchors.fill: parent
-                                                hoverEnabled: true
-                                                cursorShape: Qt.PointingHandCursor
-                                                onPressed: mouse.accepted = false
-                                            }
-                                        }
-
-                                        PlasmaComponents.ToolButton {
-                                            visible: notificationEnabled
-                                            icon.name: root.notificationMutedDevices.indexOf(DeviceUtils.deviceIdentity(device)) === -1 ? "notification-active" : "notification-disabled"
-                                            text: root.notificationMutedDevices.indexOf(DeviceUtils.deviceIdentity(device)) === -1 ? i18n("Disable Notification") : i18n("Enable Notification")
-                                            display: PlasmaComponents.AbstractButton.IconOnly
-                                            onClicked: toggleDeviceNotification(device)
-
-                                            PlasmaComponents.ToolTip {
-                                                text: root.notificationMutedDevices.indexOf(DeviceUtils.deviceIdentity(device)) === -1 ? i18n("Disable Notification") : i18n("Enable Notification")
-                                            }
-
-                                            MouseArea {
-                                                anchors.fill: parent
-                                                hoverEnabled: true
-                                                cursorShape: Qt.PointingHandCursor
-                                                onPressed: mouse.accepted = false
-                                            }
-                                        }
-
-                                        PlasmaComponents.Button {
-                                            visible: device.blocked === true
-                                            flat: true
-                                            icon.name: root.commandCopied ? "checkmark" : "edit-copy"
-                                            text: root.commandCopied ? i18n("Copied!") : i18n("Copy command")
-                                            onClicked: root.copyUnblockCommand(device)
-
-                                            PlasmaComponents.ToolTip {
-                                                text: root.commandCopied ? i18n("Copied to clipboard") : i18n("Copy the command to run in a terminal")
-                                            }
-
-                                            MouseArea {
-                                                anchors.fill: parent
-                                                hoverEnabled: true
-                                                cursorShape: Qt.PointingHandCursor
-                                                onPressed: mouse.accepted = false
-                                            }
-                                        }
-
-                                        // Single battery: show percentage
-                                        PlasmaComponents.Label {
-                                            visible: !hasMultipleBatteries && device.blocked !== true
-                                            // i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
-                                            text: i18n("%1%%2", device.percentage, device.charging ? " ⚡" : "")
-                                            color: batteryColor(device.percentage, device.charging)
-                                            font.bold: true
-                                            Layout.minimumWidth: Kirigami.Units.gridUnit * 2
-                                            horizontalAlignment: Text.AlignRight
-                                        }
-                                    }
+                            onDisconnectRequested: {
+                                if (typeof modelData.disconnect === "function") {
+                                    modelData.disconnect()
                                 }
                             }
-
-                            Kirigami.Separator {
-                                Layout.fillWidth: true
-                                visible: index < root.allDevices.length - 1
-                            }
+                            onCopyUnblockCommandRequested: root.copyUnblockCommand(modelData)
+                            onToggleVisibilityRequested: root.toggleDeviceVisibility(modelData)
+                            onToggleNotificationRequested: root.toggleDeviceNotification(modelData)
                         }
                     }
 
@@ -828,56 +440,4 @@ PlasmoidItem {
             }
         }
     }
-    // ═══════════════════════════════════════════════════════════════════════
-    // DEBUG
-    // ═══════════════════════════════════════════════════════════════════════
-
-    // A bunch of fake devices for debugging
-    property var testDevices: [
-
-        // Headphones with 3 batteries
-        {
-            name: "Headphones",
-            serial: "test-1",
-            icon: "audio-headphones",
-            batteries: [
-                {
-                    label: "Left",
-                    percentage: 50,
-                    charging: true
-                },
-                {
-                    label: "Right",
-                    percentage: 30,
-                    charging: false
-                },
-                {
-                    label: "Case",
-                    percentage: 10,
-                    charging: false
-                }
-            ]
-        },
-        {
-            name: "Mouse",
-            serial: "Mouse-test",
-            icon: "input-mouse",
-            percentage: 50,
-            charging: true
-        },
-        {
-            name: "Keyboard",
-            serial: "Keyboard-test-warning",
-            icon: "input-keyboard",
-            percentage: 30,
-            charging: false
-        },
-        {
-            name: "Gamepad",
-            serial: "Gamepad-test-critical",
-            icon: "input-gamepad",
-            percentage: 10,
-            charging: false
-        }
-    ]
 }
