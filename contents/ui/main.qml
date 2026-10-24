@@ -631,188 +631,24 @@ PlasmoidItem {
                     Repeater {
                         model: root.allDevices
 
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 0
+                        DeviceRow {
+                            device: modelData
+                            rowIndex: index
+                            rowCount: root.allDevices.length
+                            batteryColor: root.batteryColor
+                            hidden: root.hiddenDevices.indexOf(DeviceUtils.deviceIdentity(modelData)) !== -1
+                            notificationMuted: root.notificationMutedDevices.indexOf(DeviceUtils.deviceIdentity(modelData)) !== -1
+                            notificationEnabled: root.notificationEnabled
+                            commandCopied: root.commandCopied
 
-                            // Store reference to device for nested components
-                            property var device: modelData
-                            property bool hasMultipleBatteries: device.batteries && device.batteries.length > 1
-
-                            Item {
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: device.blocked === true ? Kirigami.Units.gridUnit * 5 : Kirigami.Units.gridUnit * 4
-                                Layout.topMargin: Kirigami.Units.smallSpacing
-                                Layout.bottomMargin: Kirigami.Units.smallSpacing
-
-                                RowLayout {
-                                    anchors.fill: parent
-                                    spacing: Kirigami.Units.smallSpacing
-
-                                    Kirigami.Icon {
-                                        source: device.icon
-                                        Layout.preferredWidth: Kirigami.Units.iconSizes.medium
-                                        Layout.preferredHeight: Kirigami.Units.iconSizes.medium
-                                        Layout.alignment: Qt.AlignVCenter
-                                    }
-
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        Layout.alignment: Qt.AlignVCenter
-                                        spacing: 2
-
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: Kirigami.Units.smallSpacing
-
-                                            Kirigami.Icon {
-                                                visible: device.blocked === true
-                                                source: "object-locked"
-                                                Layout.preferredWidth: Kirigami.Units.iconSizes.small
-                                                Layout.preferredHeight: Kirigami.Units.iconSizes.small
-                                                Layout.alignment: Qt.AlignVCenter
-                                            }
-
-                                            PlasmaComponents.Label {
-                                                text: device.name || i18n("Unknown Device")
-                                                font.bold: true
-                                                Layout.fillWidth: true
-                                                elide: Text.ElideRight
-                                            }
-                                        }
-
-                                        PlasmaComponents.Label {
-                                            text: device.blocked === true ? i18n("Permission needed - run the command in a terminal") : device.serial
-                                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                                            color: device.blocked === true ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.disabledTextColor
-                                            Layout.fillWidth: true
-                                            elide: Text.ElideRight
-                                            wrapMode: device.blocked === true ? Text.WordWrap : Text.NoWrap
-                                        }
-
-                                        // Multi-battery row (shown under MAC address)
-                                        RowLayout {
-                                            visible: hasMultipleBatteries
-                                            Layout.fillWidth: true
-                                            spacing: Kirigami.Units.largeSpacing
-
-                                            Repeater {
-                                                model: hasMultipleBatteries ? device.batteries : []
-
-                                                PlasmaComponents.Label {
-                                                    textFormat: Text.RichText
-                                                    text: {
-                                                        var bat = modelData;
-                                                        var label = bat.label || i18n("Battery");
-                                                        var charging = bat.charging ? " ⚡" : "";
-                                                        var color = batteryColor(bat.percentage, bat.charging);
-                                                        // i18n: %1 is the battery label or simply the word, ‘Battery’. %2 is the charge percentage value.
-                                                        // %3 is a Unicode lightning symbol displayed when the device is charging.
-                                                        return i18n("%1: <span style=\"color:%4\">%2%</span>%3", label, bat.percentage, charging, color);
-                                                    }
-                                                    font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    RowLayout {
-                                        Layout.alignment: Qt.AlignVCenter
-
-                                        PlasmaComponents.ToolButton {
-                                            visible: typeof device.disconnect === "function"
-                                            icon.name: "network-disconnect"
-                                            text: i18n("Disconnect")
-                                            display: PlasmaComponents.AbstractButton.IconOnly
-                                            onClicked: device.disconnect()
-
-                                            PlasmaComponents.ToolTip {
-                                                text: device.disconnectTooltip || i18n("Disconnect device")
-                                            }
-
-                                            MouseArea {
-                                                anchors.fill: parent
-                                                hoverEnabled: true
-                                                cursorShape: Qt.PointingHandCursor
-                                                onPressed: mouse.accepted = false
-                                            }
-                                        }
-
-                                        PlasmaComponents.ToolButton {
-                                            visible: device.blocked !== true
-                                            icon.name: root.hiddenDevices.indexOf(DeviceUtils.deviceIdentity(device)) === -1 ? "view-visible" : "view-hidden"
-                                            text: root.hiddenDevices.indexOf(DeviceUtils.deviceIdentity(device)) === -1 ? i18n("Hide") : i18n("Show")
-                                            display: PlasmaComponents.AbstractButton.IconOnly
-                                            onClicked: toggleDeviceVisibility(device)
-
-                                            PlasmaComponents.ToolTip {
-                                                text: root.hiddenDevices.indexOf(DeviceUtils.deviceIdentity(device)) === -1 ? i18n("Hide from tray") : i18n("Show in tray")
-                                            }
-
-                                            MouseArea {
-                                                anchors.fill: parent
-                                                hoverEnabled: true
-                                                cursorShape: Qt.PointingHandCursor
-                                                onPressed: mouse.accepted = false
-                                            }
-                                        }
-
-                                        PlasmaComponents.ToolButton {
-                                            visible: notificationEnabled
-                                            icon.name: root.notificationMutedDevices.indexOf(DeviceUtils.deviceIdentity(device)) === -1 ? "notification-active" : "notification-disabled"
-                                            text: root.notificationMutedDevices.indexOf(DeviceUtils.deviceIdentity(device)) === -1 ? i18n("Disable Notification") : i18n("Enable Notification")
-                                            display: PlasmaComponents.AbstractButton.IconOnly
-                                            onClicked: toggleDeviceNotification(device)
-
-                                            PlasmaComponents.ToolTip {
-                                                text: root.notificationMutedDevices.indexOf(DeviceUtils.deviceIdentity(device)) === -1 ? i18n("Disable Notification") : i18n("Enable Notification")
-                                            }
-
-                                            MouseArea {
-                                                anchors.fill: parent
-                                                hoverEnabled: true
-                                                cursorShape: Qt.PointingHandCursor
-                                                onPressed: mouse.accepted = false
-                                            }
-                                        }
-
-                                        PlasmaComponents.Button {
-                                            visible: device.blocked === true
-                                            flat: true
-                                            icon.name: root.commandCopied ? "checkmark" : "edit-copy"
-                                            text: root.commandCopied ? i18n("Copied!") : i18n("Copy command")
-                                            onClicked: root.copyUnblockCommand(device)
-
-                                            PlasmaComponents.ToolTip {
-                                                text: root.commandCopied ? i18n("Copied to clipboard") : i18n("Copy the command to run in a terminal")
-                                            }
-
-                                            MouseArea {
-                                                anchors.fill: parent
-                                                hoverEnabled: true
-                                                cursorShape: Qt.PointingHandCursor
-                                                onPressed: mouse.accepted = false
-                                            }
-                                        }
-
-                                        // Single battery: show percentage
-                                        PlasmaComponents.Label {
-                                            visible: !hasMultipleBatteries && device.blocked !== true
-                                            // i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
-                                            text: i18n("%1%%2", device.percentage, device.charging ? " ⚡" : "")
-                                            color: batteryColor(device.percentage, device.charging)
-                                            font.bold: true
-                                            Layout.minimumWidth: Kirigami.Units.gridUnit * 2
-                                            horizontalAlignment: Text.AlignRight
-                                        }
-                                    }
+                            onDisconnectRequested: {
+                                if (typeof modelData.disconnect === "function") {
+                                    modelData.disconnect()
                                 }
                             }
-
-                            Kirigami.Separator {
-                                Layout.fillWidth: true
-                                visible: index < root.allDevices.length - 1
-                            }
+                            onCopyUnblockCommandRequested: root.copyUnblockCommand(modelData)
+                            onToggleVisibilityRequested: root.toggleDeviceVisibility(modelData)
+                            onToggleNotificationRequested: root.toggleDeviceNotification(modelData)
                         }
                     }
 
