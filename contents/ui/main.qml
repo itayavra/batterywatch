@@ -77,7 +77,7 @@ PlasmoidItem {
     property var realDevices: DeviceUtils.mergeDevices(providers.map(p => p.devices))
     property var hiddenDevices: []
     property var notificationMutedDevices: []
-    property var notifiedLowBattery: []
+    property var notifiedLowBattery: ({})
 
     property int visibleDeviceCount: {
         var count = 0;
@@ -95,7 +95,7 @@ PlasmoidItem {
 
     // Tray items: flattened list for compact representation
     // For multi-battery devices, only shows batteries with showInTray=true
-    property var trayItems: buildTrayItems(allDevices, hiddenDevices)
+    property var trayItems: DeviceUtils.buildTrayItems(allDevices, hiddenDevices)
 
     // The exact command for this blocked device, from the helper (single source
     // of truth). The widget never installs anything itself - the user runs this
@@ -151,122 +151,24 @@ PlasmoidItem {
         checkBatteryNotifications()
     }
 
-    function isNotificationEnabled(device) {
-        var identity = DeviceUtils.deviceIdentity(device);
-
-        if (!identity) {
-            return false;
-        }
-
-        return notificationMutedDevices.indexOf(identity) === -1;
-    }
-
     function checkBatteryNotifications() {
         if (!notificationEnabled) {
             return;
         }
 
-        var devices = allDevices || [];
-        for (var i = 0; i < devices.length; i++) {
-            var device = devices[i];
-            if(!isNotificationEnabled(device)) {
-                continue;
-            }
+        var result = DeviceUtils.findLowBatteryAlerts(allDevices || [], notificationMutedDevices, notificationThreshold, notifiedLowBattery);
+        notifiedLowBattery = result.notified;
 
-            var identity = DeviceUtils.deviceIdentity(device);
-            if (!identity) {
-                continue;
-            }
-
-            var batteries = [];
-
-            if (device.batteries && device.batteries.length > 0) {
-                batteries = device.batteries;
-            } else if (device.percentage !== undefined
-                && device.percentage !== null) {
-                batteries = [{
-                    percentage: device.percentage,
-                    label: "",
-                    charging: device.charging
-                }];
-            }
-
-            for (var j = 0; j < batteries.length; j++) {
-                var battery = batteries[j];
-                var percentage = Number(battery.percentage);
-
-                if (!isFinite(percentage)) {
-                    continue;
-                }
-
-                if (battery.charging === true) {
-                    continue;
-                }
-
-                var label = battery.label || "";
-                var key = identity + ":" + (label || j);
-
-                //greater than 0 since some devices show 0% when turned off.
-                if (percentage > notificationThreshold || percentage <= 0) {
-                    delete notifiedLowBattery[key];
-                    continue;
-                } 
-
-                if (!notifiedLowBattery[key]) {
-                    notifiedLowBattery[key] = true;
-
-                    batteryNotificationComponent.createObject(root, {
-                        title: i18n("Low battery"),
-                        text: i18n("%1%2 has %3% battery remaining",
-                            device.name || i18n("Device"),
-                            label ? " (" + label + ")" : "",
-                            percentage)
-                    }).sendEvent();
-                }
-            }
+        for (var i = 0; i < result.alerts.length; i++) {
+            var alert = result.alerts[i];
+            batteryNotificationComponent.createObject(root, {
+                title: i18n("Low battery"),
+                text: i18n("%1%2 has %3% battery remaining",
+                    alert.name || i18n("Device"),
+                    alert.label ? " (" + alert.label + ")" : "",
+                    alert.percentage)
+            }).sendEvent();
         }
-    }
-
-    function buildTrayItems(devices, hidden) {
-        var items = [];
-        for (var i = 0; i < devices.length; i++) {
-            var device = devices[i];
-            if (hidden.indexOf(DeviceUtils.deviceIdentity(device)) !== -1)
-                continue;
-
-            // Devices whose battery needs a permission we don't have yet: keep
-            // them out of the tray; the popup shows the copy-command action.
-            if (device.blocked === true)
-                continue;
-
-            // Multi-battery device (e.g., AirPods)
-            if (device.batteries && device.batteries.length > 1) {
-                for (var j = 0; j < device.batteries.length; j++) {
-                    var bat = device.batteries[j];
-
-                    // Skip batteries marked as not for tray (e.g., Case)
-                    if (bat.showInTray === false)
-                        continue;
-                    items.push({
-                        icon: device.icon,
-                        percentage: bat.percentage,
-                        label: bat.label,
-                        deviceSerial: device.serial,
-                        charging: bat.charging
-                    });
-                }
-            } else {
-                // Single battery device
-                items.push({
-                    icon: device.icon,
-                    percentage: device.percentage,
-                    label: null,
-                    deviceSerial: device.serial,
-                    charging: device.charging
-                });
-            }
-        }
-        return items;
     }
 
     // ═══════════════════════════════════════════════════════════════════════

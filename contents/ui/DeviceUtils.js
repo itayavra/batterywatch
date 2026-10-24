@@ -122,3 +122,109 @@ function mergeDevices(deviceProviders) {
 
     return merged;
 }
+
+// Flattened tray entries: one per visible device, or one per tray-worthy
+// battery of a multi-battery device.
+function buildTrayItems(devices, hidden) {
+    var items = [];
+    for (var i = 0; i < devices.length; i++) {
+        var device = devices[i];
+        if (hidden.indexOf(deviceIdentity(device)) !== -1)
+            continue;
+
+        // Devices whose battery needs a permission we don't have yet: keep
+        // them out of the tray; the popup shows the copy-command action.
+        if (device.blocked === true)
+            continue;
+
+        // Multi-battery device (e.g., AirPods)
+        if (device.batteries && device.batteries.length > 1) {
+            for (var j = 0; j < device.batteries.length; j++) {
+                var bat = device.batteries[j];
+
+                // Skip batteries marked as not for tray (e.g., Case)
+                if (bat.showInTray === false)
+                    continue;
+                items.push({
+                    icon: device.icon,
+                    percentage: bat.percentage,
+                    label: bat.label,
+                    deviceSerial: device.serial,
+                    charging: bat.charging
+                });
+            }
+        } else {
+            // Single battery device
+            items.push({
+                icon: device.icon,
+                percentage: device.percentage,
+                label: null,
+                deviceSerial: device.serial,
+                charging: device.charging
+            });
+        }
+    }
+    return items;
+}
+
+// Decides which low-battery alerts to raise now. `notified` maps battery keys
+// to true for alerts already raised; it is not modified. Returns the alerts
+// to send and the notified map to keep for the next call.
+function findLowBatteryAlerts(devices, muted, threshold, notified) {
+    var alerts = [];
+    var next = Object.assign({}, notified);
+
+    for (var i = 0; i < devices.length; i++) {
+        var device = devices[i];
+        var identity = deviceIdentity(device);
+        if (!identity || muted.indexOf(identity) !== -1) {
+            continue;
+        }
+
+        var batteries = [];
+
+        if (device.batteries && device.batteries.length > 0) {
+            batteries = device.batteries;
+        } else if (device.percentage !== undefined
+            && device.percentage !== null) {
+            batteries = [{
+                percentage: device.percentage,
+                label: "",
+                charging: device.charging
+            }];
+        }
+
+        for (var j = 0; j < batteries.length; j++) {
+            var battery = batteries[j];
+            var percentage = Number(battery.percentage);
+
+            if (!isFinite(percentage)) {
+                continue;
+            }
+
+            if (battery.charging === true) {
+                continue;
+            }
+
+            var label = battery.label || "";
+            var key = identity + ":" + (label || j);
+
+            // greater than 0 since some devices show 0% when turned off.
+            if (percentage > threshold || percentage <= 0) {
+                delete next[key];
+                continue;
+            }
+
+            if (!next[key]) {
+                next[key] = true;
+                alerts.push({
+                    name: device.name || "",
+                    label: label,
+                    percentage: percentage
+                });
+            }
+        }
+    }
+
+    return { alerts: alerts, notified: next };
+}

@@ -15,7 +15,8 @@ const DeviceUtils = {
     canonicalSerial: context.canonicalSerial,
     deviceIdentity: context.deviceIdentity,
     getIconForType: context.getIconForType,
-    mergeDevices: context.mergeDevices
+    mergeDevices: context.mergeDevices,
+    findLowBatteryAlerts: context.findLowBatteryAlerts
 };
 
 // Braces inside a line comment must not shift the body, so count with the
@@ -990,18 +991,12 @@ test('a later provider can fill charging left unknown by the HID provider', () =
     assert.equal(hid[0].charging, null);
 });
 
+// Keeps `notified` updated in place across calls, the way the applet carries it.
 function checkNotifications(devices, notified = {}) {
-    const alerts = [];
-    callFunction(readFunction('main.qml', 'checkBatteryNotifications', '.'),
-        'checkBatteryNotifications', '', {
-            notificationEnabled: true, notificationThreshold: 20,
-            allDevices: devices, notifiedLowBattery: notified,
-            isNotificationEnabled: () => true, DeviceUtils, root: {}, i18n: s => s,
-            batteryNotificationComponent: {
-                createObject: (_root, message) => ({ sendEvent: () => alerts.push(message) })
-            }
-        });
-    return alerts;
+    const result = DeviceUtils.findLowBatteryAlerts(devices, [], 20, notified);
+    for (const key of Object.keys(notified)) delete notified[key];
+    Object.assign(notified, result.notified);
+    return result.alerts;
 }
 
 test('low-battery notifications skip only batteries known to be charging', () => {
