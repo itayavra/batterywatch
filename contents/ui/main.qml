@@ -49,95 +49,28 @@ PlasmoidItem {
     // UPDATE CHECK
     // ═══════════════════════════════════════════════════════════════════════
 
-    property string latestVersion: ""
-    property bool updateAvailable: false
-    property bool updateCheckInProgress: false
-    property string releaseNotesUrl: "https://github.com/itayavra/batterywatch/releases/latest"
-
     property bool updateCheckEnabled: Plasmoid.configuration.updateCheckEnabled !== undefined ? Plasmoid.configuration.updateCheckEnabled : true
     property string dismissedUpdateVersion: Plasmoid.configuration.dismissedUpdateVersion || ""
 
-    function versionParts(version) {
-        return String(version || "").replace(/^v/i, "").split(".").map(function(part) {
-            return parseInt(part, 10) || 0;
-        });
-    }
-
-    function isNewerVersion(candidate, current) {
-        var a = versionParts(candidate);
-        var b = versionParts(current);
-        var length = Math.max(a.length, b.length);
-        for (var i = 0; i < length; i++) {
-            var left = a[i] || 0;
-            var right = b[i] || 0;
-            if (left > right)
-                return true;
-            if (left < right)
-                return false;
-        }
-        return false;
-    }
-
-    // Silently ignores network errors.
-    function checkForUpdates() {
-        if (!updateCheckEnabled || updateCheckInProgress || !Plasmoid.metaData.version)
-            return;
-
-        updateCheckInProgress = true;
-
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", "https://api.github.com/repos/itayavra/batterywatch/releases/latest");
-        xhr.timeout = 10000;
-        try {
-            xhr.setRequestHeader("Accept", "application/vnd.github+json");
-        } catch (e) {
-        }
-
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState !== XMLHttpRequest.DONE)
-                return;
-
-            updateCheckInProgress = false;
-
-            if (xhr.status !== 200)
-                return;
-
-            try {
-                var data = JSON.parse(xhr.responseText);
-                var tag = data.tag_name || data.name || "";
-                if (!tag || data.draft)
-                    return;
-
-                latestVersion = tag.replace(/^v/i, "");
-                releaseNotesUrl = data.html_url || releaseNotesUrl;
-                updateAvailable = isNewerVersion(latestVersion, Plasmoid.metaData.version);
-            } catch (e) {
-            }
-        };
-
-        xhr.send();
-    }
-
     function openUpdateUrl() {
-        Qt.openUrlExternally(releaseNotesUrl);
+        Qt.openUrlExternally(updateChecker.releaseNotesUrl);
     }
 
     function dismissUpdate() {
-        if (!latestVersion)
+        if (!updateChecker.latestVersion)
             return;
-        Plasmoid.configuration.dismissedUpdateVersion = latestVersion;
+        Plasmoid.configuration.dismissedUpdateVersion = updateChecker.latestVersion;
     }
 
-    property bool showTooltipUpdate: updateCheckEnabled && updateAvailable && Plasmoid.configuration.updateNotifyTooltip
-    property bool showPillUpdate: updateCheckEnabled && updateAvailable && Plasmoid.configuration.updateNotifyInlineMessage
-        && dismissedUpdateVersion !== latestVersion
-
-    Timer {
-        interval: 24 * 60 * 60 * 1000
-        repeat: true
-        running: root.updateCheckEnabled
-        onTriggered: root.checkForUpdates()
+    UpdateChecker {
+        id: updateChecker
+        enabled: root.updateCheckEnabled
+        currentVersion: Plasmoid.metaData.version
     }
+
+    property bool showTooltipUpdate: updateCheckEnabled && updateChecker.updateAvailable && Plasmoid.configuration.updateNotifyTooltip
+    property bool showPillUpdate: updateCheckEnabled && updateChecker.updateAvailable && Plasmoid.configuration.updateNotifyInlineMessage
+        && dismissedUpdateVersion !== updateChecker.latestVersion
 
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -334,7 +267,6 @@ PlasmoidItem {
     Component.onCompleted: {
         loadHiddenDevices();
         loadNotificationMutedDevices();
-        checkForUpdates();
         updatesReady = true;
     }
 
@@ -342,8 +274,6 @@ PlasmoidItem {
         if (!updatesReady)
             return;
         Plasmoid.configuration.dismissedUpdateVersion = "";
-        if (updateCheckEnabled)
-            checkForUpdates();
     }
 
     function loadHiddenDevices() {
@@ -492,72 +422,11 @@ PlasmoidItem {
                     Layout.fillWidth: true
                 }
 
-                Rectangle {
-                    id: updatePill
+                UpdatePill {
                     visible: root.showPillUpdate
-                    Layout.alignment: Qt.AlignVCenter
-                    implicitWidth: updatePillRow.implicitWidth + Kirigami.Units.largeSpacing
-                    implicitHeight: updatePillRow.implicitHeight + Kirigami.Units.smallSpacing
-                    radius: height / 2
-                    color: Qt.rgba(Kirigami.Theme.highlightColor.r,
-                                   Kirigami.Theme.highlightColor.g,
-                                   Kirigami.Theme.highlightColor.b,
-                                   updatePillMouse.containsMouse ? 0.32 : 0.18)
-
-                    // Behind the row so labels stay click-through and the close
-                    // button keeps its own click.
-                    MouseArea {
-                        id: updatePillMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.openUpdateUrl()
-
-                        PlasmaComponents.ToolTip {
-                            visible: updatePillMouse.containsMouse && !updatePillDismiss.hovered
-                            // i18n: %1 is the newer available version.
-                            text: i18n("BatteryWatch v%1 is available — click to download", root.latestVersion)
-                        }
-                    }
-
-                    RowLayout {
-                        id: updatePillRow
-                        anchors.centerIn: parent
-                        spacing: Kirigami.Units.smallSpacing
-
-                        Kirigami.Icon {
-                            source: "download"
-                            Layout.preferredWidth: Kirigami.Units.iconSizes.small
-                            Layout.preferredHeight: Kirigami.Units.iconSizes.small
-                        }
-
-                        PlasmaComponents.Label {
-                            // i18n: %1 is the newer available version.
-                            text: i18n("Update v%1", root.latestVersion)
-                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                        }
-
-                        PlasmaComponents.ToolButton {
-                            id: updatePillDismiss
-                            icon.name: "dialog-close"
-                            display: PlasmaComponents.AbstractButton.IconOnly
-                            text: i18n("Dismiss")
-                            Layout.preferredWidth: Kirigami.Units.iconSizes.small
-                            Layout.preferredHeight: Kirigami.Units.iconSizes.small
-                            onClicked: root.dismissUpdate()
-
-                            PlasmaComponents.ToolTip {
-                                text: i18n("Hide until the next update")
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onPressed: mouse.accepted = false
-                            }
-                        }
-                    }
+                    latestVersion: updateChecker.latestVersion
+                    onDownload: root.openUpdateUrl()
+                    onDismiss: root.dismissUpdate()
                 }
 
                 PlasmaComponents.ToolButton {
