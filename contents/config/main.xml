@@ -187,4 +187,24 @@
       <default />
     </entry>
   </group>
+
+  <!-- Updates -->
+  <group name="Updates">
+    <entry name="updateCheckEnabled" type="Bool">
+      <label>Automatically check for new versions</label>
+      <default>true</default>
+    </entry>
+    <entry name="updateNotifyTooltip" type="Bool">
+      <label>Show update hint in tooltip</label>
+      <default>true</default>
+    </entry>
+    <entry name="updateNotifyInlineMessage" type="Bool">
+      <label>Show update pill in popup header</label>
+      <default>true</default>
+    </entry>
+    <entry name="dismissedUpdateVersion" type="String">
+      <label>Update version the user dismissed</label>
+      <default />
+    </entry>
+  </group>
 </kcfg>

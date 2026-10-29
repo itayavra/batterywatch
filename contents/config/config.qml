@@ -18,6 +18,11 @@ ConfigModel {
         source: "config/Notifications.qml"
     }
     ConfigCategory {
+        name: i18n("Updates")
+        icon: "system-software-update"
+        source: "config/Updates.qml"
+    }
+    ConfigCategory {
         name: i18n("Advanced settings")
         icon: "settings-configure"
         source: "config/AdvancedSettings.qml"

@@ -45,6 +45,33 @@ PlasmoidItem {
     property bool notificationEnabled: Plasmoid.configuration.notificationEnabled !== undefined ? Plasmoid.configuration.notificationEnabled : false
     property var notificationThreshold: Plasmoid.configuration.notificationThreshold !== undefined ? Plasmoid.configuration.notificationThreshold : 20
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // UPDATE CHECK
+    // ═══════════════════════════════════════════════════════════════════════
+
+    property bool updateCheckEnabled: Plasmoid.configuration.updateCheckEnabled !== undefined ? Plasmoid.configuration.updateCheckEnabled : true
+    property string dismissedUpdateVersion: Plasmoid.configuration.dismissedUpdateVersion || ""
+
+    function openUpdateUrl() {
+        Qt.openUrlExternally(updateChecker.releaseNotesUrl);
+    }
+
+    function dismissUpdate() {
+        if (!updateChecker.latestVersion)
+            return;
+        Plasmoid.configuration.dismissedUpdateVersion = updateChecker.latestVersion;
+    }
+
+    UpdateChecker {
+        id: updateChecker
+        enabled: root.updateCheckEnabled
+        currentVersion: Plasmoid.metaData.version
+    }
+
+    property bool showTooltipUpdate: updateCheckEnabled && updateChecker.updateAvailable && Plasmoid.configuration.updateNotifyTooltip
+    property bool showPillUpdate: updateCheckEnabled && updateChecker.updateAvailable && Plasmoid.configuration.updateNotifyInlineMessage
+        && dismissedUpdateVersion !== updateChecker.latestVersion
+
 
     // ═══════════════════════════════════════════════════════════════════════
     // DEVICE STATE
@@ -154,8 +181,14 @@ PlasmoidItem {
 
     preferredRepresentation: compactRepresentation
 
-    // i18n: %1 is the version number.
-    toolTipMainText: i18n("BatteryWatch v%1", Plasmoid.metaData.version)
+    toolTipMainText: {
+        if (showTooltipUpdate) {
+            // i18n: %1 is the version number.
+            return i18n("BatteryWatch v%1 (Update available)", Plasmoid.metaData.version);
+        }
+        // i18n: %1 is the version number.
+        return i18n("BatteryWatch v%1", Plasmoid.metaData.version);
+    }
     toolTipSubText: {
         // Unable to implement colours, custom hover menu would be necessary
         if (allDevices.length === 0) {
@@ -228,9 +261,19 @@ PlasmoidItem {
     // HIDDEN DEVICES PERSISTENCE
     // ═══════════════════════════════════════════════════════════════════════
 
+    // Skips the handler during initial binding evaluation.
+    property bool updatesReady: false
+
     Component.onCompleted: {
         loadHiddenDevices();
         loadNotificationMutedDevices();
+        updatesReady = true;
+    }
+
+    onUpdateCheckEnabledChanged: {
+        if (!updatesReady)
+            return;
+        Plasmoid.configuration.dismissedUpdateVersion = "";
     }
 
     function loadHiddenDevices() {
@@ -377,6 +420,13 @@ PlasmoidItem {
                     font.bold: true
                     font.pixelSize: Kirigami.Theme.defaultFont.pixelSize * 1.2
                     Layout.fillWidth: true
+                }
+
+                UpdatePill {
+                    visible: root.showPillUpdate
+                    latestVersion: updateChecker.latestVersion
+                    onDownload: root.openUpdateUrl()
+                    onDismiss: root.dismissUpdate()
                 }
 
                 PlasmaComponents.ToolButton {
