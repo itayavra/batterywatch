@@ -17,6 +17,8 @@ sysfs + hidraw devices and verifies every behavior the widget depends on:
   K57 RGB Wireless (Corsair): Bragi GET-only link, level and status requests
                   through the dongle's command interface, reply validation,
                   no keyboard request while the keyboard is not linked.
+  Fantech Aria XD7 / Aria E XD7E: Pulsar report-8 online, battery and offline
+                  transactions over feature or output reports.
   SC2 (stream):   battery decode from stream report, charging state, no write.
 
 Written as plain pytest-style test_*() functions so they read like idiomatic
@@ -1098,6 +1100,237 @@ def test_k57_blocked_entry_and_udev_rule():
     rule = rhd.udev_rule_for(0x1B1C)
     assert 'ATTRS{idProduct}=="1b62"' in rule
     assert rule.count('MODE="0660"') == 1
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Fantech Aria XD7 / Aria E XD7E: Pulsar report-8 transactions
+# ══════════════════════════════════════════════════════════════════════════
+PULSAR_ONLINE_ON = bytes.fromhex(
+    "08 03 00 00 00 00 01 00 00 00 00 00 00 00 00 00 49"
+)
+PULSAR_BATTERY = bytes.fromhex(
+    "08 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 49"
+)
+PULSAR_ONLINE_OFF = bytes.fromhex(
+    "08 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 4a"
+)
+
+def pulsar_reply(report_id, command, pct=None, charging=None, online=None,
+                 status=0, busy=False):
+    buf = bytearray(17)
+    buf[0] = report_id
+    buf[1] = command
+    buf[2] = status
+    if online is not None:
+        buf[6] = online
+    if pct is not None:
+        buf[6] = pct
+    if charging is not None:
+        buf[7] = 1 if charging else 0
+    if busy:
+        buf[10] = 1
+    return bytes(buf)
+
+def pulsar_uevent(vid, pid, name, iface):
+    return (f"DRIVER=hid-generic\nHID_ID=0003:{vid:08X}:{pid:08X}\n"
+            f"HID_NAME={name}\nHID_PHYS=usb-0000:00:14.0-8/input{iface}\n"
+            "HID_UNIQ=\n")
+
+def install_pulsar_scenario(vid=0x25A7, pid=0xFA7C, name="Fantech Aria XD7",
+                            nodes=("hidraw5", "hidraw6"), reply_report_id=9,
+                            with_blocked=False):
+    scenario["uevents"] = {
+        nodes[0]: pulsar_uevent(vid, pid, name, 0),
+        nodes[1]: pulsar_uevent(vid, pid, name, 1),
+    }
+    scenario["fake_devs"] = {f"/dev/{nodes[0]}": 505, f"/dev/{nodes[1]}": 506}
+    scenario["deny"] = with_blocked
+    scenario["writes"] = []
+    scenario["write_data"] = []
+    scenario["reads"] = []
+    scenario["read_sizes"] = []
+    scenario["open_flags"] = []
+    scenario["descriptors"] = {
+        nodes[0]: hid_descriptor_pages(0x01, 0x09, 0x0C),
+        nodes[1]: hid_descriptor_pages(0x01, 0x07, 0x08, 0x0C, 0xFF01, 0xFF02, 0xFF04),
+    }
+    scenario["descriptor_reads"] = 0
+    scenario["reply_buf"] = bytearray(0)
+    scenario["reply_queue"] = [
+        pulsar_reply(reply_report_id, 0x03, online=1),
+        pulsar_reply(reply_report_id, 0x04, pct=64, charging=True),
+        pulsar_reply(reply_report_id, 0x03, online=0),
+    ]
+    scenario["reply_fd"] = 506
+    scenario["ioctls"] = []
+
+def set_pulsar_replies(report_id=9, pct=64, charging=True):
+    scenario["reply_queue"] = [
+        pulsar_reply(report_id, 0x03, online=1),
+        pulsar_reply(report_id, 0x04, pct=pct, charging=charging),
+        pulsar_reply(report_id, 0x03, online=0),
+    ]
+
+def test_pulsar_profiles_use_report_8_and_the_expected_transport():
+    aria = next(dev for dev in rhd.KNOWN_DEVICES if dev.name == "Fantech Aria XD7")
+    aria_e = next(dev for dev in rhd.KNOWN_DEVICES if dev.name == "Fantech Aria E XD7E")
+
+    assert aria.vid == 0x25A7
+    assert aria.variants == (rhd.DeviceVariant(0xFA7C, None, 0xFF02),)
+    assert aria_e.vid == 0x3554
+    assert aria_e.variants == (rhd.DeviceVariant(0xF5D5, None, 0xFF02),)
+
+    assert [t.key for t in aria.source.transactions] == ["online", "battery", "offline"]
+    assert [t.request for t in aria.source.transactions] == [
+        PULSAR_ONLINE_ON, PULSAR_BATTERY, PULSAR_ONLINE_OFF
+    ]
+    assert [t.report_id for t in aria.source.transactions] == [9, 9, 9]
+    assert [t.write_mode for t in aria.source.transactions] == [rhd.WriteMode.FEATURE] * 3
+    assert [t.required for t in aria.source.transactions] == [True, True, False]
+
+    assert [t.report_id for t in aria_e.source.transactions] == [8, 8, 8]
+    assert [t.write_mode for t in aria_e.source.transactions] == [rhd.WriteMode.OUTPUT] * 3
+    assert [t.required for t in aria_e.source.transactions] == [True, True, False]
+
+def test_pulsar_discovery_uses_vendor_page_not_the_first_interface():
+    install_pulsar_scenario()
+    assert [dev.devpath for dev in rhd.find_devices()] == ["/dev/hidraw6"]
+
+    install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
+                            nodes=("hidraw3", "hidraw4"), reply_report_id=8)
+    assert [dev.devpath for dev in rhd.find_devices()] == ["/dev/hidraw4"]
+
+def test_pulsar_aria_uses_feature_writes_on_the_selected_node():
+    install_pulsar_scenario()
+    writes = []
+
+    def fake_feature_write(fd, request, timeout):
+        writes.append((fd, request))
+
+    with mock.patch.object(rhd, "_write_feature_report", fake_feature_write):
+        assert rhd.read_status(rhd.find_devices()[0]) == {
+            "percentage": 64, "charging": True
+        }
+
+    assert writes == [(506, PULSAR_ONLINE_ON), (506, PULSAR_BATTERY),
+                      (506, PULSAR_ONLINE_OFF)]
+    assert scenario["writes"] == []
+
+def test_pulsar_aria_e_uses_output_writes_on_the_selected_node():
+    install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
+                            nodes=("hidraw3", "hidraw4"), reply_report_id=8)
+    assert rhd.read_status(rhd.find_devices()[0]) == {
+        "percentage": 64, "charging": True
+    }
+    assert scenario["writes"] == [506, 506, 506]
+    assert scenario["write_data"] == [
+        PULSAR_ONLINE_ON, PULSAR_BATTERY, PULSAR_ONLINE_OFF
+    ]
+
+def test_pulsar_online_busy_reply_is_resent():
+    install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
+                            nodes=("hidraw3", "hidraw4"), reply_report_id=8)
+    scenario["reply_queue"] = [
+        pulsar_reply(8, 0x03, online=0, busy=True),
+        pulsar_reply(8, 0x03, online=1),
+        pulsar_reply(8, 0x04, pct=64, charging=True),
+        pulsar_reply(8, 0x03, online=0),
+    ]
+    assert rhd.read_status(rhd.find_devices()[0]) == {
+        "percentage": 64, "charging": True
+    }
+    assert scenario["write_data"] == [
+        PULSAR_ONLINE_ON, PULSAR_ONLINE_ON, PULSAR_BATTERY, PULSAR_ONLINE_OFF
+    ]
+    assert len(scenario["reads"]) == 4
+
+def test_pulsar_feature_write_uses_hidiocsfeature():
+    install_pulsar_scenario()
+    rhd._set_feature_report(506, PULSAR_ONLINE_ON)
+    assert scenario["ioctls"] == [
+        (506, rhd._hidiocsfeature(len(PULSAR_ONLINE_ON)), PULSAR_ONLINE_ON)
+    ]
+
+def test_pulsar_feature_worker_inherits_the_open_fd():
+    launched = {}
+
+    class Process:
+        returncode = 0
+        def communicate(self, timeout=None):
+            launched["timeout"] = timeout
+            return b"", b""
+
+    def popen(command, **kwargs):
+        launched["command"] = command
+        launched["pass_fds"] = kwargs.get("pass_fds")
+        return Process()
+
+    fake_subprocess = types.SimpleNamespace(**{**vars(subprocess), "Popen": popen})
+    with mock.patch.object(rhd, "subprocess", fake_subprocess):
+        rhd._write_feature_report(506, PULSAR_ONLINE_ON, 0.25)
+
+    assert launched["pass_fds"] == (506,)
+    assert launched["timeout"] == 0.25
+    assert launched["command"][1:4] == [
+        os.path.abspath(rhd.__file__), "--feature-write", "506"
+    ]
+
+def test_pulsar_decodes_zero_and_full_battery_and_charging_states():
+    install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
+                            nodes=("hidraw3", "hidraw4"), reply_report_id=8)
+    set_pulsar_replies(report_id=8, pct=0, charging=False)
+    assert rhd.read_status(rhd.find_devices()[0]) == {
+        "percentage": 0, "charging": False
+    }
+
+    install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
+                            nodes=("hidraw3", "hidraw4"), reply_report_id=8)
+    set_pulsar_replies(report_id=8, pct=100, charging=True)
+    assert rhd.read_status(rhd.find_devices()[0]) == {
+        "percentage": 100, "charging": True
+    }
+
+def test_pulsar_rejects_wrong_report_command_status_and_battery():
+    install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
+                            nodes=("hidraw3", "hidraw4"), reply_report_id=8)
+    scenario["reply_queue"] = [
+        pulsar_reply(0x07, 0x03, online=1),
+        pulsar_reply(8, 0x04, pct=64, charging=True),
+        pulsar_reply(8, 0x03, online=1, status=1),
+        pulsar_reply(8, 0x03, online=1),
+        pulsar_reply(8, 0x04, pct=101, charging=False),
+        pulsar_reply(8, 0x04, pct=64, charging=True),
+        pulsar_reply(8, 0x03, online=0),
+    ]
+    assert rhd.read_status(rhd.find_devices()[0]) == {
+        "percentage": 64, "charging": True
+    }
+    assert len(scenario["reads"]) == 7
+
+def test_pulsar_offline_failure_keeps_a_valid_reading():
+    install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
+                            nodes=("hidraw3", "hidraw4"), reply_report_id=8)
+    scenario["reply_queue"] = [
+        pulsar_reply(8, 0x03, online=1),
+        pulsar_reply(8, 0x04, pct=64, charging=True),
+    ]
+    dev = rhd.find_devices()[0]
+    dev = dev._replace(source=dev.source._replace(timeout=0.05))
+    assert rhd.read_status(dev) == {"percentage": 64, "charging": True}
+    assert scenario["write_data"] == [
+        PULSAR_ONLINE_ON, PULSAR_BATTERY, PULSAR_ONLINE_OFF
+    ]
+
+def test_pulsar_required_failure_skips_remaining_required_but_sends_offline():
+    install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
+                            nodes=("hidraw3", "hidraw4"), reply_report_id=8)
+    scenario["reply_queue"] = [pulsar_reply(8, 0x03, online=1)]
+    dev = rhd.find_devices()[0]
+    dev = dev._replace(source=dev.source._replace(timeout=0.05))
+    assert rhd.read_status(dev) is None
+    assert scenario["write_data"] == [
+        PULSAR_ONLINE_ON, PULSAR_BATTERY, PULSAR_ONLINE_OFF
+    ]
 
 
 # ══════════════════════════════════════════════════════════════════════════
