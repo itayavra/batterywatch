@@ -441,8 +441,9 @@ def _pulsar_request(command, report_id=PULSAR_COMMAND_REPORT_ID, enabled=None):
 
 def _pulsar_reply_check(command, online=None):
     def check(buf):
-        if len(buf) < 8:
-            return f"expected at least 8 bytes, got {len(buf)}"
+        minimum = 11 if command == PULSAR_ONLINE_COMMAND else 8
+        if len(buf) < minimum:
+            return f"expected at least {minimum} bytes, got {len(buf)}"
         if buf[1] != command:
             return f"command {buf[1]:#04x} does not echo {command:#04x}"
         if buf[2] != 0:
@@ -1216,9 +1217,9 @@ def read_transaction_status_hw(dev, schema):
                 continue
 
             attempts = 0
-            buf = None
             while True:
                 attempts += 1
+                buf = None
                 if not _send_transaction(dev, fd, transaction, timeout):
                     break
 

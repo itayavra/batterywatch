@@ -1244,6 +1244,45 @@ def test_pulsar_online_busy_reply_is_resent():
     ]
     assert len(scenario["reads"]) == 4
 
+def test_pulsar_failed_retry_does_not_count_as_handshake_success():
+    install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
+                            nodes=("hidraw3", "hidraw4"), reply_report_id=8)
+    scenario["reply_queue"] = [
+        pulsar_reply(8, 0x03, online=0, busy=True),
+        pulsar_reply(8, 0x04, pct=64, charging=True),
+        pulsar_reply(8, 0x03, online=0),
+    ]
+    calls = {"count": 0}
+
+    def flaky_write(fd, data):
+        calls["count"] += 1
+        scenario["writes"].append(fd)
+        scenario["write_data"].append(bytes(data))
+        if calls["count"] == 2:
+            raise OSError(5, "Input/output error")
+        return len(data)
+
+    dev = rhd.find_devices()[0]
+    dev = dev._replace(source=dev.source._replace(timeout=0.05))
+    with mock.patch.object(rhd.os, "write", flaky_write):
+        assert rhd.read_status(dev) is None
+    assert scenario["write_data"] == [
+        PULSAR_ONLINE_ON, PULSAR_ONLINE_ON, PULSAR_ONLINE_OFF
+    ]
+
+def test_pulsar_truncated_handshake_is_not_accepted():
+    install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
+                            nodes=("hidraw3", "hidraw4"), reply_report_id=8)
+    scenario["reply_queue"] = [
+        pulsar_reply(8, 0x03, online=1)[:8],
+        pulsar_reply(8, 0x04, pct=64, charging=True),
+        pulsar_reply(8, 0x03, online=0),
+    ]
+    dev = rhd.find_devices()[0]
+    dev = dev._replace(source=dev.source._replace(timeout=0.05))
+    assert rhd.read_status(dev) is None
+    assert scenario["write_data"] == [PULSAR_ONLINE_ON, PULSAR_ONLINE_OFF]
+
 def test_pulsar_feature_write_uses_hidiocsfeature():
     install_pulsar_scenario()
     rhd._set_feature_report(506, PULSAR_ONLINE_ON)
