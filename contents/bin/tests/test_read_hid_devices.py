@@ -1244,6 +1244,17 @@ def test_pulsar_online_busy_reply_is_resent():
     ]
     assert len(scenario["reads"]) == 4
 
+def test_pulsar_busy_handshake_exhausts_max_attempts():
+    install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
+                            nodes=("hidraw3", "hidraw4"), reply_report_id=8)
+    scenario["reply_queue"] = [
+        pulsar_reply(8, 0x03, online=0, busy=True)
+    ] * 20
+    dev = rhd.find_devices()[0]
+    dev = dev._replace(source=dev.source._replace(timeout=0.05))
+    assert rhd.read_status(dev) is None
+    assert scenario["write_data"] == [PULSAR_ONLINE_ON] * 20 + [PULSAR_ONLINE_OFF]
+
 def test_pulsar_failed_retry_does_not_count_as_handshake_success():
     install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
                             nodes=("hidraw3", "hidraw4"), reply_report_id=8)
@@ -1313,6 +1324,57 @@ def test_pulsar_feature_worker_inherits_the_open_fd():
     assert launched["command"][1:4] == [
         os.path.abspath(rhd.__file__), "--feature-write", "506"
     ]
+
+def test_pulsar_feature_worker_timeout_kills_and_reaps():
+    release = threading.Event()
+    reaping = threading.Event()
+    finished = threading.Event()
+
+    class Process:
+        killed = False
+        def communicate(self, timeout=None):
+            if timeout is not None:
+                raise subprocess.TimeoutExpired("feature worker", timeout)
+            reaping.set()
+            release.wait(3)
+            finished.set()
+            return b"", b""
+        def kill(self):
+            self.killed = True
+
+    process = Process()
+    fake_subprocess = types.SimpleNamespace(
+        **{**vars(subprocess), "Popen": lambda *args, **kwargs: process})
+    try:
+        with mock.patch.object(rhd, "subprocess", fake_subprocess):
+            try:
+                rhd._write_feature_report(506, PULSAR_ONLINE_ON, 0.25)
+            except subprocess.TimeoutExpired:
+                pass
+            else:
+                assert False, "feature write timeout was not raised"
+            assert process.killed
+            assert reaping.wait(1)
+            assert not finished.is_set(), "reader waited for the pending ioctl"
+    finally:
+        release.set()
+        assert finished.wait(1)
+
+def test_pulsar_feature_worker_nonzero_exit_raises_oserror():
+    class Process:
+        returncode = 7
+        def communicate(self, timeout=None):
+            return b"", b"ioctl failed\n"
+
+    fake_subprocess = types.SimpleNamespace(
+        **{**vars(subprocess), "Popen": lambda *args, **kwargs: Process()})
+    with mock.patch.object(rhd, "subprocess", fake_subprocess):
+        try:
+            rhd._write_feature_report(506, PULSAR_ONLINE_ON, 0.25)
+        except OSError as e:
+            assert str(e) == "ioctl failed"
+        else:
+            assert False, "feature write failure was not raised"
 
 def test_pulsar_decodes_zero_and_full_battery_and_charging_states():
     install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
