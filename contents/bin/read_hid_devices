@@ -415,6 +415,9 @@ def _bragi_parse(replies):
 
 
 # ── Pulsar/CompX report-8 protocol (Fantech Aria XD7 / Aria E XD7E) ───────
+# Protocol documented by OpenMouse's mouse-protocol (AGPL-3.0):
+# https://github.com/OpenMouse-Project/mouse-protocol
+# This is an independent implementation, no source code was copied.
 # The protocol uses a 16-byte report-8 packet with a 0x55 checksum. The Aria
 # XD7 exposes report 8 as a feature report and answers on input report 9; the
 # Aria E XD7E exposes report 8 as an output report and answers on input
