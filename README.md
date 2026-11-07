@@ -92,11 +92,11 @@ For instructions on how to contribute translations, add new languages, or test c
 | Locale | Language | Status | % Done |
 |--------|----------|--------|--------|
 | en     | English      | ✅ Source   |   100% |
-| cs     | Czech        | 🟡 In Progress |    81% |
+| cs     | Czech        | ✅ Complete |   100% |
 | de     | German       | ✅ Complete |   100% |
-| he     | Hebrew       | 🟡 In Progress |    81% |
-| hu     | Hungarian    | 🟡 In Progress |    81% |
-| nl     | Dutch        | 🟡 In Progress |    81% |
-| pl     | Polish       | 🟡 In Progress |    81% |
-| ru     | Russian      | 🟡 In Progress |    81% |
+| he     | Hebrew       | ✅ Complete |   100% |
+| hu     | Hungarian    | ✅ Complete |   100% |
+| nl     | Dutch        | ✅ Complete |   100% |
+| pl     | Polish       | ✅ Complete |   100% |
+| ru     | Russian      | ✅ Complete |   100% |
 <!-- TRANSLATIONS_END -->

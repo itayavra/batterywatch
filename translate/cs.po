@@ -31,11 +31,11 @@ msgstr "Integrace"
 
 #: ../contents/config/config.qml
 msgid "Notification"
-msgstr ""
+msgstr "Oznámení"
 
 #: ../contents/config/config.qml
 msgid "Updates"
-msgstr ""
+msgstr "Aktualizace"
 
 #: ../contents/config/config.qml
 msgid "Advanced settings"
@@ -239,55 +239,55 @@ msgstr ""
 
 #: ../contents/ui/config/Modules.qml
 msgid "HeadsetControl Integration"
-msgstr ""
+msgstr "HeadsetControl Integrace"
 
 #: ../contents/ui/config/Modules.qml
 msgid "Sets the interval for HeadsetControl battery updates."
-msgstr ""
+msgstr "Nastaví interval aktualizací stavu baterie HeadsetControl."
 
 #: ../contents/ui/config/Notifications.qml ../contents/ui/DeviceRow.qml
 msgid "Enable Notification"
-msgstr ""
+msgstr "Povolit oznámení"
 
 #: ../contents/ui/config/Notifications.qml
 msgid "Threshold"
-msgstr ""
+msgstr "Práh"
 
 #: ../contents/ui/config/Notifications.qml
 msgid "Shows system notification when battery falls below the set threshold."
-msgstr ""
+msgstr "Zobrazí systémové oznámení, když baterie klesne pod nastavený práh."
 
 #: ../contents/ui/config/Updates.qml
 msgid "Update checks"
-msgstr ""
+msgstr "Kontrola aktualizací"
 
 #: ../contents/ui/config/Updates.qml
 msgid "Check for updates"
-msgstr ""
+msgstr "Zkontrolovat aktualizace"
 
 #: ../contents/ui/config/Updates.qml
 msgid "Periodically asks GitHub for the latest BatteryWatch release. No data is sent."
-msgstr ""
+msgstr "Pravidelně se dotazuje GitHubu na nejnovější vydání BatteryWatch. Žádná data se neodesílají."
 
 #: ../contents/ui/config/Updates.qml
 msgid "How to notify"
-msgstr ""
+msgstr "Způsob oznámení"
 
 #: ../contents/ui/config/Updates.qml
 msgid "Tooltip hint"
-msgstr ""
+msgstr "Nápověda v popisku"
 
 #: ../contents/ui/config/Updates.qml
 msgid "(Update available) appended when hovering the tray icon"
-msgstr ""
+msgstr "„(Aktualizace k dispozici)“ připojeno při najetí na ikonu v liště"
 
 #: ../contents/ui/config/Updates.qml
 msgid "Header pill"
-msgstr ""
+msgstr "Štítek v záhlaví"
 
 #: ../contents/ui/config/Updates.qml
 msgid "Dismissible download chip in the popup header"
-msgstr ""
+msgstr "Zavíratelný štítek ke stažení v záhlaví vyskakovacího okna"
 
 #: ../contents/ui/DeviceRow.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/HeadsetControlProvider.qml ../contents/ui/providers/HIDDevicesProvider.qml ../contents/ui/providers/OpenLinkHubProvider.qml ../contents/ui/providers/SolaarProvider.qml
 msgid "Unknown Device"
@@ -331,7 +331,7 @@ msgstr "Skryj z lišty"
 
 #: ../contents/ui/DeviceRow.qml
 msgid "Disable Notification"
-msgstr ""
+msgstr "Zakázat oznámení"
 
 #: ../contents/ui/DeviceRow.qml
 msgid "Copied!"
@@ -355,20 +355,20 @@ msgstr "%1%%2"
 
 #: ../contents/ui/main.qml
 msgid "Low battery"
-msgstr ""
+msgstr "Nízký stav baterie"
 
 #: ../contents/ui/main.qml
 msgid "Device"
-msgstr ""
+msgstr "Zařízení"
 
 #: ../contents/ui/main.qml
 msgid "%1%2 has %3% battery remaining"
-msgstr ""
+msgstr "%1%2 má ještě %3 % baterie"
 
 #. i18n: %1 is the version number.
 #: ../contents/ui/main.qml
 msgid "BatteryWatch v%1 (Update available)"
-msgstr ""
+msgstr "BatteryWatch v%1 (aktualizace k dispozici)"
 
 #. i18n: %1 is the version number.
 #: ../contents/ui/main.qml
@@ -556,19 +556,19 @@ msgstr "%1%"
 
 #: ../contents/ui/UpdatePill.qml
 msgid "BatteryWatch v%1 is available — click to download"
-msgstr ""
+msgstr "BatteryWatch v%1 je k dispozici — klikněte pro stažení"
 
 #: ../contents/ui/UpdatePill.qml
 msgid "Update v%1"
-msgstr ""
+msgstr "Aktualizovat na v%1"
 
 #: ../contents/ui/UpdatePill.qml
 msgid "Dismiss"
-msgstr ""
+msgstr "Zavřít"
 
 #: ../contents/ui/UpdatePill.qml
 msgid "Hide until the next update"
-msgstr ""
+msgstr "Skrýt do další aktualizace"
 
 #~ msgid "Steam Controller 2 Integration"
 #~ msgstr "Steam Controller 2 Integrace"
