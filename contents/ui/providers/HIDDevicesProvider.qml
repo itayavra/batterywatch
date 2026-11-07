@@ -18,7 +18,7 @@ Item {
     readonly property string helperPath: Qt.resolvedUrl("../../bin/read_hid_devices").toString().slice(7)
 
     // Connection types
-    readonly property int wirelessType: 1
+    readonly property int wirelessType: DeviceUtils.ConnectionType.Wireless
 
     // Data passed to the applet
     property var devices: []
