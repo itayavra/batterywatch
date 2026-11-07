@@ -1176,7 +1176,8 @@ def test_pulsar_profiles_use_report_8_and_the_expected_transport():
     aria_e = next(dev for dev in rhd.KNOWN_DEVICES if dev.name == "Fantech Aria E XD7E")
 
     assert aria.vid == 0x25A7
-    assert aria.variants == (rhd.DeviceVariant(0xFA7C, None, 0xFF02),)
+    assert aria.variants == (rhd.DeviceVariant(0xFA7C, None, 0xFF02),
+                             rhd.DeviceVariant(0xFA7B, None, 0xFF02))
     assert aria_e.vid == 0x3554
     assert aria_e.variants == (rhd.DeviceVariant(0xF5D5, None, 0xFF02),)
 
@@ -1199,6 +1200,34 @@ def test_pulsar_discovery_uses_vendor_page_not_the_first_interface():
     install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
                             nodes=("hidraw3", "hidraw4"), reply_report_id=8)
     assert [dev.devpath for dev in rhd.find_devices()] == ["/dev/hidraw4"]
+
+def test_pulsar_wired_aria_discovers_and_reads_the_feature_node():
+    install_pulsar_scenario(pid=0xFA7B)
+    scenario["reply_queue"] = [
+        bytes.fromhex("09 03 00 00 00 01 01 00 00 00 00 00 00 00 00 00 47"),
+        bytes.fromhex("09 04 00 00 00 02 4b 00 00 00 00 00 00 00 00 00 fb"),
+        bytes.fromhex("09 03 00 00 00 01 01 00 00 00 00 00 00 00 00 00 47"),
+    ]
+    devices = rhd.find_devices()
+    assert len(devices) == 1
+    dev = devices[0]
+    assert dev.devpath == "/dev/hidraw6" and dev.pid == 0xFA7B
+    with mock.patch.object(rhd, "_write_feature_report") as send:
+        entry = rhd._device_entry(dev)
+    assert entry["percentage"] == 75 and entry["charging"] is False
+    assert [call.args[1] for call in send.call_args_list] == [
+        PULSAR_ONLINE_ON, PULSAR_BATTERY, PULSAR_ONLINE_OFF
+    ]
+    assert scenario["writes"] == []
+
+def test_pulsar_wired_aria_permission_rule_covers_both_variants():
+    install_pulsar_scenario(pid=0xFA7B, with_blocked=True)
+    entry = rhd._device_entry(rhd.find_devices()[0])
+    assert entry["blocked"] is True and entry["pid"] == "fa7b"
+    command = entry["unblock_command"]
+    assert 'ATTRS{idProduct}=="fa7b"' in command
+    assert 'ATTRS{idProduct}=="fa7c"' in command
+    assert command.count('MODE="0660"') == 2
 
 def test_pulsar_aria_uses_feature_writes_on_the_selected_node():
     install_pulsar_scenario()

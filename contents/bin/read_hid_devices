@@ -506,7 +506,8 @@ def _pulsar_mice():
             name="Fantech Aria XD7",
             device_type=DeviceType.MOUSE,
             vid=0x25A7,
-            variants=(DeviceVariant(0xFA7C, None, 0xFF02),),
+            variants=(DeviceVariant(0xFA7C, None, 0xFF02),  # wireless receiver
+                      DeviceVariant(0xFA7B, None, 0xFF02)), # wired mouse
             source=RequestSchema(
                 charge=DataPos(0x09, 6),
                 charge_range=None,
