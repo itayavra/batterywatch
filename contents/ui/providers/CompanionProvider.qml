@@ -61,7 +61,7 @@ Item {
             source: "companion",
             nativePath: "",
             objectPath: "",
-            connectionType: 2,
+            connectionType: DeviceUtils.ConnectionType.Bluetooth,
             bluetoothAddress: id,
             disconnect: () => companionDisconnectSource.connectSource("bluetoothctl disconnect " + id),
             disconnectTooltip: i18n("Disconnect device")

@@ -64,6 +64,10 @@ class DeviceType(Enum):
     HEADPHONES  = "audio-headphones"
     HEADSET     = "audio-headset"
 
+class WriteMode(Enum):
+    OUTPUT      = "output"   # interrupt output report via os.write()
+    FEATURE     = "feature"  # HIDIOCSFEATURE, isolated in a short-lived child
+
 # usage_page sentinel: any vendor-defined page (0xff00-0xffff). Used when the
 # battery collection's exact page varies across a family, so only the range is
 # stable enough to match on.
@@ -105,6 +109,11 @@ class RequestTransaction(NamedTuple):
     request:        bytes
     report_id:      int
     validate_reply: Callable[[bytes], str | None]
+    write_mode:     WriteMode = WriteMode.OUTPUT
+    required:       bool = True   # False = best effort; failure does not discard the reading
+    retry_reply:    Callable[[bytes], bool] | None = None  # Reply means "busy; send again"
+    max_attempts:   int = 1
+    failure_reply: Callable[[bytes], bool] | None = None  # Reply definitively fails this step
 
     def rejection_reason(self, buf) -> str | None:
         if not buf:
@@ -406,6 +415,134 @@ def _bragi_parse(replies):
     }
 
 
+# ── Pulsar/CompX report-8 protocol (Fantech Aria XD7 / Aria E XD7E) ───────
+# Protocol documented by OpenMouse's mouse-protocol (AGPL-3.0):
+# https://github.com/OpenMouse-Project/mouse-protocol
+# This is an independent implementation, no source code was copied.
+# The protocol uses a 16-byte report-8 packet with a 0x55 checksum. The Aria
+# XD7 exposes report 8 as a feature report and answers on input report 9; the
+# Aria E XD7E exposes report 8 as an output report and answers on input
+# report 8. Byte 0 in a hidraw buffer is the report ID, so every payload
+# offset is one byte higher here.
+PULSAR_COMMAND_REPORT_ID = 0x08
+PULSAR_PACKET_LEN = 16
+PULSAR_ONLINE_COMMAND = 0x03
+PULSAR_BATTERY_COMMAND = 0x04
+
+def _pulsar_request(command, report_id=PULSAR_COMMAND_REPORT_ID, enabled=None):
+    packet = bytearray(PULSAR_PACKET_LEN)
+    packet[0] = command
+    if enabled is not None:
+        packet[5] = 1 if enabled else 0
+    checksum = report_id
+    for byte in packet[:-1]:
+        checksum += byte
+    packet[-1] = (0x55 - (checksum & 0xff)) & 0xff
+    return bytes([report_id]) + bytes(packet)
+
+def _pulsar_reply_check(command, online=None):
+    def check(buf):
+        minimum = 11 if command == PULSAR_ONLINE_COMMAND else 8
+        if len(buf) < minimum:
+            return f"expected at least {minimum} bytes, got {len(buf)}"
+        if buf[1] != command:
+            return f"command {buf[1]:#04x} does not echo {command:#04x}"
+        if buf[2] != 0:
+            return f"status {buf[2]:#04x} is not success"
+        if command == PULSAR_ONLINE_COMMAND and online is not None and buf[6] != online:
+            return f"online flag {buf[6]:#04x} is not {online:#04x}"
+        if command == PULSAR_BATTERY_COMMAND and buf[6] > 100:
+            return f"battery value {buf[6]} is outside 0..100"
+        return None
+    return check
+
+def _pulsar_parse(replies):
+    buf = replies.get("battery")
+    if buf is None or len(buf) < 8:
+        return None
+    return {"percentage": buf[6], "charging": buf[7] == 1}
+
+def _pulsar_busy(report_id):
+    # Host-control entry/exit is retried up to 20 times while the
+    # receiver reports busy in response[9] (buffer byte 10 after the report ID).
+    def busy(buf):
+        return (len(buf) > 10 and buf[0] == report_id
+                and buf[1] == PULSAR_ONLINE_COMMAND
+                and buf[2] == 0 and buf[10] == 1)
+    return busy
+
+def _pulsar_not_linked(report_id):
+    def not_linked(buf):
+        return (len(buf) >= 11 and buf[0] == report_id
+                and buf[1] == PULSAR_ONLINE_COMMAND and buf[2] == 0
+                and buf[6] == 0 and buf[10] != 1)
+    return not_linked
+
+def _pulsar_transactions(report_id, write_mode):
+    return (
+        RequestTransaction(
+            key="online",
+            request=_pulsar_request(PULSAR_ONLINE_COMMAND, enabled=True),
+            report_id=report_id,
+            validate_reply=_pulsar_reply_check(PULSAR_ONLINE_COMMAND, online=1),
+            write_mode=write_mode,
+            retry_reply=_pulsar_busy(report_id),
+            max_attempts=20,
+            failure_reply=_pulsar_not_linked(report_id),
+        ),
+        RequestTransaction(
+            key="battery",
+            request=_pulsar_request(PULSAR_BATTERY_COMMAND),
+            report_id=report_id,
+            validate_reply=_pulsar_reply_check(PULSAR_BATTERY_COMMAND),
+            write_mode=write_mode,
+        ),
+        RequestTransaction(
+            key="offline",
+            request=_pulsar_request(PULSAR_ONLINE_COMMAND, enabled=False),
+            report_id=report_id,
+            validate_reply=_pulsar_reply_check(PULSAR_ONLINE_COMMAND),
+            write_mode=write_mode,
+            required=False,
+            retry_reply=_pulsar_busy(report_id),
+            max_attempts=20,
+        ),
+    )
+
+def _pulsar_mice():
+    return [
+        Device(
+            name="Fantech Aria XD7",
+            device_type=DeviceType.MOUSE,
+            vid=0x25A7,
+            variants=(DeviceVariant(0xFA7C, None, 0xFF02),  # wireless receiver
+                      DeviceVariant(0xFA7B, None, 0xFF02)), # wired mouse
+            source=RequestSchema(
+                charge=DataPos(0x09, 6),
+                charge_range=None,
+                status=ChargingStates(DataPos(0x09, 7), {0x01: True}),
+                timeout=REQUEST_TIMEOUT_SEC,
+                transactions=_pulsar_transactions(0x09, WriteMode.FEATURE),
+            ),
+            parse=_pulsar_parse,
+        ),
+        Device(
+            name="Fantech Aria E XD7E",
+            device_type=DeviceType.MOUSE,
+            vid=0x3554,
+            variants=(DeviceVariant(0xF5D5, None, 0xFF02),),
+            source=RequestSchema(
+                charge=DataPos(0x08, 6),
+                charge_range=None,
+                status=ChargingStates(DataPos(0x08, 7), {0x01: True}),
+                timeout=REQUEST_TIMEOUT_SEC,
+                transactions=_pulsar_transactions(0x08, WriteMode.OUTPUT),
+            ),
+            parse=_pulsar_parse,
+        ),
+    ]
+
+
 KNOWN_DEVICES = [
     Device(
         name="Keychron M5",
@@ -582,7 +719,7 @@ KNOWN_DEVICES = [
         ),
         parse=_bragi_parse,
     ),
-] + _glorious_mice()
+] + _glorious_mice() + _pulsar_mice()
 
 # PIDs whose variants select the battery node by report-descriptor usage page.
 # Descriptors are only read for these: doing it for every hidraw node would
@@ -919,13 +1056,16 @@ def _hidiocsfeature(size):
 def _hidiocgfeature(size):
     return (3 << 30) | (size << 16) | (ord('H') << 8) | 0x07
 
+def _set_feature_report(fd, request):
+    sent = fcntl.ioctl(fd, _hidiocsfeature(len(request)), bytearray(request))
+    if sent != len(request):
+        raise OSError(f"short feature request: sent {sent} of {len(request)} bytes")
+
 # Runs only in the feature worker. It owns the descriptor through both ioctls.
 def _read_feature_report(devpath, request, settle):
     fd = os.open(devpath, os.O_RDWR | os.O_NONBLOCK)
     try:
-        sent = fcntl.ioctl(fd, _hidiocsfeature(len(request)), bytearray(request))
-        if sent != len(request):
-            raise OSError(f"short feature request: sent {sent} of {len(request)} bytes")
+        _set_feature_report(fd, request)
         time.sleep(settle)
         buf = bytearray(len(request))
         buf[0] = request[0]
@@ -933,6 +1073,25 @@ def _read_feature_report(devpath, request, settle):
         return bytes(buf[:received])
     finally:
         os.close(fd)
+
+# The feature worker inherits the already-open node, so all transactions in a
+# sequence use one descriptor. It exits immediately after HIDIOCSFEATURE.
+def _write_feature_report(fd, request, timeout):
+    process = subprocess.Popen(
+        [sys.executable, os.path.abspath(__file__), "--feature-write",
+         str(fd), request.hex()],
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        pass_fds=(fd,),
+    )
+    try:
+        _, error = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        threading.Thread(target=process.communicate, daemon=True).start()
+        raise
+    if process.returncode:
+        raise OSError(error.decode(errors="replace").strip() or
+                      f"feature write exited with status {process.returncode}")
 
 # O_NONBLOCK does not bound USB control ioctls. A separate process with private
 # pipes lets the helper emit JSON and exit on time even if a killed worker is
@@ -975,9 +1134,83 @@ def read_feature_status(dev, schema):
     debug(f"{dev.desc.name}: reading {result}")
     return result
 
+def _send_transaction(dev, fd, transaction, timeout):
+    if transaction.write_mode is WriteMode.FEATURE:
+        debug(f"{dev.desc.name}: set feature {hexbuf(transaction.request)} "
+              f"({len(transaction.request)} bytes) [{transaction.key}]")
+        try:
+            _write_feature_report(fd, transaction.request, timeout)
+            return True
+        except (OSError, subprocess.TimeoutExpired) as e:
+            debug(f"{dev.desc.name}: feature write of {hexbuf(transaction.request)} "
+                  f"failed: {e}")
+            return False
+
+    try:
+        debug(f"{dev.desc.name}: write {hexbuf(transaction.request)} "
+              f"({len(transaction.request)} bytes) [{transaction.key}]")
+        written = os.write(fd, transaction.request)
+    except OSError as e:
+        debug(f"{dev.desc.name}: write of {hexbuf(transaction.request)} failed: {e}")
+        return False
+    if written != len(transaction.request):
+        debug(f"{dev.desc.name}: short write for {transaction.key}: "
+              f"{written} of {len(transaction.request)} bytes")
+        return False
+    return True
+
+_TRANSACTION_RETRY = object()
+
+def _wait_transaction_reply(dev, poller, fd, transaction, timeout):
+    deadline = time.monotonic() + timeout
+    read_size = max(HID_BUFFER_SIZE, len(transaction.request))
+    while True:
+        timeout_ms = int((deadline - time.monotonic()) * 1000)
+        if timeout_ms <= 0:
+            debug(f"{dev.desc.name}: no accepted reply for {transaction.key} "
+                  f"within {timeout:g}s ({dev.devpath})")
+            return None
+
+        events = poller.poll(timeout_ms)
+        if not events:
+            debug(f"{dev.desc.name}: no accepted reply for {transaction.key} "
+                  f"within {timeout:g}s ({dev.devpath})")
+            return None
+
+        _, revents = events[0]
+        if revents & (select.POLLERR | select.POLLHUP | select.POLLNVAL):
+            debug(f"{dev.desc.name}: device error or disconnect "
+                  f"(poll flags {revents:#x})")
+            return None
+        if not (revents & select.POLLIN):
+            return None
+
+        try:
+            buf = os.read(fd, read_size)
+        except OSError as e:
+            debug(f"{dev.desc.name}: read failed: {e}")
+            return None
+        if not buf:
+            continue
+
+        debug(f"{dev.desc.name}: received {hexbuf(buf)} ({len(buf)} bytes) "
+              f"[{transaction.key}]")
+        if transaction.retry_reply is not None and transaction.retry_reply(buf):
+            debug(f"{dev.desc.name}: {transaction.key} replied busy; retrying")
+            return _TRANSACTION_RETRY
+        if transaction.failure_reply is not None and transaction.failure_reply(buf):
+            debug(f"{dev.desc.name}: {transaction.key} received a failure reply")
+            return None
+        reason = transaction.rejection_reason(buf)
+        if reason is not None:
+            debug(f"{dev.desc.name}: ignored: {reason}")
+            continue
+        return buf
+
 # Runs a short ordered sequence of request/reply exchanges on one open node.
-# Every step must succeed before parse() sees any replies, so callers never get
-# a partial battery state.
+# Required steps must all succeed before parse() sees any replies. A failed
+# best-effort step (the Pulsar offline command) is logged but does not discard
+# an otherwise valid reading.
 def read_transaction_status_hw(dev, schema):
     fd = open_device(dev, schema)
     if fd is None:
@@ -987,63 +1220,40 @@ def read_transaction_status_hw(dev, schema):
         poller = select.poll()
         poller.register(fd, select.POLLIN)
         replies = {}
+        failed = False
+        timeout = schema.poll_timeout()
 
         for transaction in schema.transactions:
-            try:
-                debug(f"{dev.desc.name}: write {hexbuf(transaction.request)} "
-                      f"({len(transaction.request)} bytes) [{transaction.key}]")
-                written = os.write(fd, transaction.request)
-            except OSError as e:
-                debug(f"{dev.desc.name}: write of {hexbuf(transaction.request)} failed: {e}")
-                return None
-            if written != len(transaction.request):
-                debug(f"{dev.desc.name}: short write for {transaction.key}: "
-                      f"{written} of {len(transaction.request)} bytes")
-                return None
+            if failed and transaction.required:
+                debug(f"{dev.desc.name}: skipping required {transaction.key} "
+                      f"after an earlier failure")
+                continue
 
-            # Timeout applies per transaction; a full sequence may take N * timeout.
-            deadline = time.monotonic() + schema.poll_timeout()
-            read_size = max(HID_BUFFER_SIZE, len(transaction.request))
+            attempts = 0
             while True:
-                timeout_ms = int((deadline - time.monotonic()) * 1000)
-                if timeout_ms <= 0:
-                    debug(f"{dev.desc.name}: no accepted reply for {transaction.key} "
-                          f"within {schema.poll_timeout():g}s ({dev.devpath})")
-                    return None
+                attempts += 1
+                buf = None
+                if not _send_transaction(dev, fd, transaction, timeout):
+                    break
 
-                events = poller.poll(timeout_ms)
-                if not events:
-                    debug(f"{dev.desc.name}: no accepted reply for {transaction.key} "
-                          f"within {schema.poll_timeout():g}s ({dev.devpath})")
-                    return None
+                # Timeout applies per transaction; a full sequence may take N * timeout.
+                buf = _wait_transaction_reply(dev, poller, fd, transaction, timeout)
+                if buf is not _TRANSACTION_RETRY:
+                    break
+                if attempts >= transaction.max_attempts:
+                    debug(f"{dev.desc.name}: {transaction.key} stayed busy after "
+                          f"{attempts} attempts")
+                    buf = None
+                    break
+                time.sleep(0.01)
 
-                _, revents = events[0]
-                if revents & (select.POLLERR | select.POLLHUP | select.POLLNVAL):
-                    debug(f"{dev.desc.name}: device error or disconnect "
-                          f"(poll flags {revents:#x})")
-                    return None
-                if not (revents & select.POLLIN):
-                    return None
+            if buf is None:
+                if transaction.required:
+                    failed = True
+                continue
+            replies[transaction.key] = buf
 
-                try:
-                    buf = os.read(fd, read_size)
-                except OSError as e:
-                    debug(f"{dev.desc.name}: read failed: {e}")
-                    return None
-                if not buf:
-                    continue
-
-                debug(f"{dev.desc.name}: received {hexbuf(buf)} ({len(buf)} bytes) "
-                      f"[{transaction.key}]")
-                reason = transaction.rejection_reason(buf)
-                if reason is not None:
-                    debug(f"{dev.desc.name}: ignored: {reason}")
-                    continue
-
-                replies[transaction.key] = buf
-                break
-
-        if dev.desc.parse is None:
+        if failed or dev.desc.parse is None:
             return None
         result = dev.desc.parse(replies)
         debug(f"{dev.desc.name}: reading {result}")
@@ -1200,6 +1410,13 @@ def main():
             print(e, file=sys.stderr)
             sys.exit(1)
         sys.stdout.buffer.write(buf)
+        return
+    if len(sys.argv) == 4 and sys.argv[1] == "--feature-write":
+        try:
+            _set_feature_report(int(sys.argv[2]), bytes.fromhex(sys.argv[3]))
+        except (OSError, ValueError) as e:
+            print(e, file=sys.stderr)
+            sys.exit(1)
         return
     if _DEBUG:
         # Strip the flag so the logic below sees the same argv as without it.

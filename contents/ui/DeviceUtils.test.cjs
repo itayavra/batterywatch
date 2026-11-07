@@ -11,6 +11,13 @@ const context = vm.createContext({});
 vm.runInContext(source, context);
 const getIconForType = context.getIconForType;
 
+test('connection types preserve the provider and helper numeric contract', () => {
+    assert.equal(context.ConnectionType.Wired, 0);
+    assert.equal(context.ConnectionType.Wireless, 1);
+    assert.equal(context.ConnectionType.Bluetooth, 2);
+    assert.equal(Object.isFrozen(context.ConnectionType), true);
+});
+
 test('legacy and canonical headset types use the headset icon', () => {
     assert.equal(getIconForType('headset'), 'audio-headset');
     assert.equal(getIconForType('audio-headset'), 'audio-headset');
