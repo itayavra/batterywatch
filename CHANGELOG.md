@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Changed
+- **Translation catalogs synced for the new settings** — the notification, update-check and HeadsetControl strings are now in every catalog, and German is fully translated (contributed by @LookforFPS, PR #73)
+
+### Contributors
+- @LookforFPS — translation catalog refresh and German translations (PR #73)
+
+## [0.3.3] - 2026-11-07
+
 ### Added
 - **BlueZ integration** — battery percentage of connected Bluetooth devices that report battery to BlueZ but not to UPower (e.g. 8bitdo controllers), read through `bluetoothctl` with a configurable polling interval (default 5s) and a disconnect action. Charging is reported as unknown rather than "not charging", so a provider that knows the state fills it in (contributed by @birrkan)
 - **Low-battery notifications** — enable alerts, and set a battery threshold; use the popup's bell toggle to mute individual devices. BatteryWatch sends one system notification when a monitored battery is at or below the threshold and not charging; it can alert again after the battery rises above the threshold and later drops low again. Muted devices are saved across restarts (contributed by @YourM4jesty, issue #60)
@@ -147,7 +155,8 @@
 
 Initial development releases (v0.1.0 – v0.1.9, through 2026-01-03). Core functionality: monitor battery levels of Bluetooth and wireless devices via UPower, with OpenLinkHub and BatteryWatch Companion integration.
 
-[Unreleased]: https://github.com/itayavra/batterywatch/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/itayavra/batterywatch/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/itayavra/batterywatch/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/itayavra/batterywatch/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/itayavra/batterywatch/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/itayavra/batterywatch/compare/v0.2.2...v0.3.0
