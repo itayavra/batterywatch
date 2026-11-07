@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-10-10 12:34+0300\n"
+"POT-Creation-Date: 2026-11-07 19:53+0100\n"
 "PO-Revision-Date: 2026-03-24 23:56+0100\n"
 "Last-Translator: Levente Pál Szíjártó <szijartoleventepal@gmail.com>\n"
 "Language-Team: hu\n"
@@ -29,6 +29,14 @@ msgstr "Megjelenés"
 #: ../contents/config/config.qml
 msgid "Integrations"
 msgstr "Integrációk"
+
+#: ../contents/config/config.qml
+msgid "Notification"
+msgstr ""
+
+#: ../contents/config/config.qml
+msgid "Updates"
+msgstr ""
 
 #: ../contents/config/config.qml
 msgid "Advanced settings"
@@ -150,7 +158,7 @@ msgstr "1. zóna"
 msgid "≤"
 msgstr "≤"
 
-#: ../contents/ui/config/Appearance.qml
+#: ../contents/ui/config/Appearance.qml ../contents/ui/config/Notifications.qml
 msgid "%"
 msgstr "%"
 
@@ -239,6 +247,148 @@ msgstr ""
 "Beállítja a Solaar eszközállapot-frissítések időközét.\n"
 "A Solaar telepítését igényli; csak Logitech-eszközök."
 
+#: ../contents/ui/config/Modules.qml
+msgid "HeadsetControl Integration"
+msgstr ""
+
+#: ../contents/ui/config/Modules.qml
+msgid "Sets the interval for HeadsetControl battery updates."
+msgstr ""
+
+#: ../contents/ui/config/Notifications.qml ../contents/ui/DeviceRow.qml
+msgid "Enable Notification"
+msgstr ""
+
+#: ../contents/ui/config/Notifications.qml
+msgid "Threshold"
+msgstr ""
+
+#: ../contents/ui/config/Notifications.qml
+msgid "Shows system notification when battery falls below the set threshold."
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid "Update checks"
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid "Check for updates"
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid ""
+"Periodically asks GitHub for the latest BatteryWatch release. No data is "
+"sent."
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid "How to notify"
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid "Tooltip hint"
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid "(Update available) appended when hovering the tray icon"
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid "Header pill"
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid "Dismissible download chip in the popup header"
+msgstr ""
+
+#: ../contents/ui/DeviceRow.qml ../contents/ui/providers/CompanionProvider.qml
+#: ../contents/ui/providers/HeadsetControlProvider.qml
+#: ../contents/ui/providers/HIDDevicesProvider.qml
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+#: ../contents/ui/providers/SolaarProvider.qml
+msgid "Unknown Device"
+msgstr "Ismeretlen eszköz"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Permission needed - run the command in a terminal"
+msgstr "Engedély szükséges - futtassa a parancsot egy terminálban"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Battery"
+msgstr "Akkumulátor"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "%1: <span style=\"color:%4\">%2%</span>%3"
+msgstr "%1: <span style=\"color:%4\">%2%</span>%3"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Disconnect"
+msgstr "Leválasztás"
+
+#: ../contents/ui/DeviceRow.qml ../contents/ui/providers/BluezProvider.qml
+#: ../contents/ui/providers/CompanionProvider.qml
+#: ../contents/ui/providers/SolaarProvider.qml
+#: ../contents/ui/providers/UPowerProvider.qml
+msgid "Disconnect device"
+msgstr "Eszköz leválasztása"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Show"
+msgstr "Megjelenítés"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Hide"
+msgstr "Elrejtés"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Show in tray"
+msgstr "Megjelenítés a paneltálcán"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Hide from tray"
+msgstr "Elrejtés a paneltálcáról"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Disable Notification"
+msgstr ""
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Copied!"
+msgstr "Kimásolva!"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Copy command"
+msgstr "Parancs másolása"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Copied to clipboard"
+msgstr "Vágólapra másolva"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Copy the command to run in a terminal"
+msgstr "A terminálban futtatható parancs másolása"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "%1%%2"
+msgstr "%1%%2"
+
+#: ../contents/ui/main.qml
+msgid "Low battery"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "Device"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "%1%2 has %3% battery remaining"
+msgstr ""
+
+#. i18n: %1 is the version number.
+#: ../contents/ui/main.qml
+msgid "BatteryWatch v%1 (Update available)"
+msgstr ""
+
 #. i18n: %1 is the version number.
 #: ../contents/ui/main.qml
 msgid "BatteryWatch v%1"
@@ -274,11 +424,6 @@ msgstr "%1 - %2"
 msgid "All devices hidden"
 msgstr "Minden eszköz rejtett"
 
-#. i18n: %1 is the charge percentage value; the trailing % is a literal percent sign.
-#: ../contents/ui/main.qml
-msgid "%1%"
-msgstr "%1%"
-
 #: ../contents/ui/main.qml
 msgid "Device Battery Levels"
 msgstr "Eszközök töltöttsége"
@@ -290,75 +435,6 @@ msgstr "Frissítés"
 #: ../contents/ui/main.qml
 msgid "Refresh devices"
 msgstr "Eszközlista frissítése"
-
-#: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml
-#: ../contents/ui/providers/HIDDevicesProvider.qml
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-#: ../contents/ui/providers/SolaarProvider.qml
-msgid "Unknown Device"
-msgstr "Ismeretlen eszköz"
-
-#: ../contents/ui/main.qml
-msgid "Permission needed - run the command in a terminal"
-msgstr "Engedély szükséges - futtassa a parancsot egy terminálban"
-
-#: ../contents/ui/main.qml
-msgid "Battery"
-msgstr "Akkumulátor"
-
-#. i18n: %1 is the battery label or simply the word, ‘Battery’. %2 is the charge percentage value.
-#. %3 is a Unicode lightning symbol displayed when the device is charging.
-#: ../contents/ui/main.qml
-msgid "%1: <span style=\"color:%4\">%2%</span>%3"
-msgstr "%1: <span style=\"color:%4\">%2%</span>%3"
-
-#: ../contents/ui/main.qml
-msgid "Disconnect"
-msgstr "Leválasztás"
-
-#: ../contents/ui/main.qml ../contents/ui/providers/BluezProvider.qml
-#: ../contents/ui/providers/CompanionProvider.qml
-#: ../contents/ui/providers/SolaarProvider.qml
-#: ../contents/ui/providers/UPowerProvider.qml
-msgid "Disconnect device"
-msgstr "Eszköz leválasztása"
-
-#: ../contents/ui/main.qml
-msgid "Hide"
-msgstr "Elrejtés"
-
-#: ../contents/ui/main.qml
-msgid "Show"
-msgstr "Megjelenítés"
-
-#: ../contents/ui/main.qml
-msgid "Hide from tray"
-msgstr "Elrejtés a paneltálcáról"
-
-#: ../contents/ui/main.qml
-msgid "Show in tray"
-msgstr "Megjelenítés a paneltálcán"
-
-#: ../contents/ui/main.qml
-msgid "Copied!"
-msgstr "Kimásolva!"
-
-#: ../contents/ui/main.qml
-msgid "Copy command"
-msgstr "Parancs másolása"
-
-#: ../contents/ui/main.qml
-msgid "Copied to clipboard"
-msgstr "Vágólapra másolva"
-
-#: ../contents/ui/main.qml
-msgid "Copy the command to run in a terminal"
-msgstr "A terminálban futtatható parancs másolása"
-
-#. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
-#: ../contents/ui/main.qml
-msgid "%1%%2"
-msgstr "%1%%2"
 
 #: ../contents/ui/main.qml
 msgid "No connected devices with battery info found"
@@ -496,6 +572,27 @@ msgstr "BatteryWatch: a Solaar-könyvtár nem érhető el (%1)"
 #: ../contents/ui/providers/UPowerProvider.qml
 msgid "BatteryWatch: Applying UPower device override for '%1': %2 -> %3"
 msgstr "BatteryWatch: UPower-eszköz felülírása. „%1”: %2 -> %3"
+
+#. i18n: %1 is the charge percentage value; the trailing % is a literal percent sign.
+#: ../contents/ui/TrayDeviceItem.qml
+msgid "%1%"
+msgstr "%1%"
+
+#: ../contents/ui/UpdatePill.qml
+msgid "BatteryWatch v%1 is available — click to download"
+msgstr ""
+
+#: ../contents/ui/UpdatePill.qml
+msgid "Update v%1"
+msgstr ""
+
+#: ../contents/ui/UpdatePill.qml
+msgid "Dismiss"
+msgstr ""
+
+#: ../contents/ui/UpdatePill.qml
+msgid "Hide until the next update"
+msgstr ""
 
 #~ msgid "Steam Controller 2 Integration"
 #~ msgstr "Steam Controller 2-integráció"

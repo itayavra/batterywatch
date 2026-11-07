@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-10-10 12:34+0300\n"
+"POT-Creation-Date: 2026-11-07 19:53+0100\n"
 "PO-Revision-Date: 2026-05-18 02:44+0300\n"
 "Last-Translator: dev <dd3v@altmails.com>\n"
 "Language-Team: Russian <gnu@d07.ru>\n"
@@ -28,6 +28,14 @@ msgstr "Оформление"
 #: ../contents/config/config.qml
 msgid "Integrations"
 msgstr "Интеграции"
+
+#: ../contents/config/config.qml
+msgid "Notification"
+msgstr ""
+
+#: ../contents/config/config.qml
+msgid "Updates"
+msgstr ""
 
 #: ../contents/config/config.qml
 msgid "Advanced settings"
@@ -147,7 +155,7 @@ msgstr "Зона 1"
 msgid "≤"
 msgstr "≤"
 
-#: ../contents/ui/config/Appearance.qml
+#: ../contents/ui/config/Appearance.qml ../contents/ui/config/Notifications.qml
 msgid "%"
 msgstr "%"
 
@@ -231,6 +239,139 @@ msgstr ""
 "Устанавливает интервал обновления состояния устройств Solaar.\n"
 "Требуется установленный Solaar; только устройства Logitech."
 
+#: ../contents/ui/config/Modules.qml
+msgid "HeadsetControl Integration"
+msgstr ""
+
+#: ../contents/ui/config/Modules.qml
+msgid "Sets the interval for HeadsetControl battery updates."
+msgstr ""
+
+#: ../contents/ui/config/Notifications.qml ../contents/ui/DeviceRow.qml
+msgid "Enable Notification"
+msgstr ""
+
+#: ../contents/ui/config/Notifications.qml
+msgid "Threshold"
+msgstr ""
+
+#: ../contents/ui/config/Notifications.qml
+msgid "Shows system notification when battery falls below the set threshold."
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid "Update checks"
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid "Check for updates"
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid "Periodically asks GitHub for the latest BatteryWatch release. No data is sent."
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid "How to notify"
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid "Tooltip hint"
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid "(Update available) appended when hovering the tray icon"
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid "Header pill"
+msgstr ""
+
+#: ../contents/ui/config/Updates.qml
+msgid "Dismissible download chip in the popup header"
+msgstr ""
+
+#: ../contents/ui/DeviceRow.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/HeadsetControlProvider.qml ../contents/ui/providers/HIDDevicesProvider.qml ../contents/ui/providers/OpenLinkHubProvider.qml ../contents/ui/providers/SolaarProvider.qml
+msgid "Unknown Device"
+msgstr "Неизвестное устройство"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Permission needed - run the command in a terminal"
+msgstr "Требуется разрешение - выполните команду в терминале"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Battery"
+msgstr "Батарея"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "%1: <span style=\"color:%4\">%2%</span>%3"
+msgstr "%1: <span style=\"color:%4\">%2%</span>%3"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Disconnect"
+msgstr "Отключить"
+
+#: ../contents/ui/DeviceRow.qml ../contents/ui/providers/BluezProvider.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/SolaarProvider.qml ../contents/ui/providers/UPowerProvider.qml
+msgid "Disconnect device"
+msgstr "Отключить устройство"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Show"
+msgstr "Показать"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Hide"
+msgstr "Скрыть"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Show in tray"
+msgstr "Показать в системном лотке"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Hide from tray"
+msgstr "Скрыть из системного лотка"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Disable Notification"
+msgstr ""
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Copied!"
+msgstr "Скопировано!"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Copy command"
+msgstr "Скопировать команду"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Copied to clipboard"
+msgstr "Скопировано в буфер обмена"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Copy the command to run in a terminal"
+msgstr "Скопировать команду для запуска в терминале"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "%1%%2"
+msgstr "%1%%2"
+
+#: ../contents/ui/main.qml
+msgid "Low battery"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "Device"
+msgstr ""
+
+#: ../contents/ui/main.qml
+msgid "%1%2 has %3% battery remaining"
+msgstr ""
+
+#. i18n: %1 is the version number.
+#: ../contents/ui/main.qml
+msgid "BatteryWatch v%1 (Update available)"
+msgstr ""
+
 #. i18n: %1 is the version number.
 #: ../contents/ui/main.qml
 msgid "BatteryWatch v%1"
@@ -266,11 +407,6 @@ msgstr "%1 — %2"
 msgid "All devices hidden"
 msgstr "Все устройства скрыты"
 
-#. i18n: %1 is the charge percentage value; the trailing % is a literal percent sign.
-#: ../contents/ui/main.qml
-msgid "%1%"
-msgstr "%1%"
-
 #: ../contents/ui/main.qml
 msgid "Device Battery Levels"
 msgstr "Уровень заряда устройств"
@@ -282,69 +418,6 @@ msgstr "Обновить"
 #: ../contents/ui/main.qml
 msgid "Refresh devices"
 msgstr "Обновить устройства"
-
-#: ../contents/ui/main.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/HIDDevicesProvider.qml ../contents/ui/providers/OpenLinkHubProvider.qml ../contents/ui/providers/SolaarProvider.qml
-msgid "Unknown Device"
-msgstr "Неизвестное устройство"
-
-#: ../contents/ui/main.qml
-msgid "Permission needed - run the command in a terminal"
-msgstr "Требуется разрешение - выполните команду в терминале"
-
-#: ../contents/ui/main.qml
-msgid "Battery"
-msgstr "Батарея"
-
-#. i18n: %1 is the battery label or simply the word, ‘Battery’. %2 is the charge percentage value.
-#. %3 is a Unicode lightning symbol displayed when the device is charging.
-#: ../contents/ui/main.qml
-msgid "%1: <span style=\"color:%4\">%2%</span>%3"
-msgstr "%1: <span style=\"color:%4\">%2%</span>%3"
-
-#: ../contents/ui/main.qml
-msgid "Disconnect"
-msgstr "Отключить"
-
-#: ../contents/ui/main.qml ../contents/ui/providers/BluezProvider.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/SolaarProvider.qml ../contents/ui/providers/UPowerProvider.qml
-msgid "Disconnect device"
-msgstr "Отключить устройство"
-
-#: ../contents/ui/main.qml
-msgid "Hide"
-msgstr "Скрыть"
-
-#: ../contents/ui/main.qml
-msgid "Show"
-msgstr "Показать"
-
-#: ../contents/ui/main.qml
-msgid "Hide from tray"
-msgstr "Скрыть из системного лотка"
-
-#: ../contents/ui/main.qml
-msgid "Show in tray"
-msgstr "Показать в системном лотке"
-
-#: ../contents/ui/main.qml
-msgid "Copied!"
-msgstr "Скопировано!"
-
-#: ../contents/ui/main.qml
-msgid "Copy command"
-msgstr "Скопировать команду"
-
-#: ../contents/ui/main.qml
-msgid "Copied to clipboard"
-msgstr "Скопировано в буфер обмена"
-
-#: ../contents/ui/main.qml
-msgid "Copy the command to run in a terminal"
-msgstr "Скопировать команду для запуска в терминале"
-
-#. i18n: %1 is the charge percentage value, %2 is an optional charging indicator suffix (e.g. " ⚡") or empty string. %% is a literal percent sign.
-#: ../contents/ui/main.qml
-msgid "%1%%2"
-msgstr "%1%%2"
 
 #: ../contents/ui/main.qml
 msgid "No connected devices with battery info found"
@@ -477,6 +550,27 @@ msgstr "BatteryWatch: библиотека Solaar недоступна (%1)"
 #: ../contents/ui/providers/UPowerProvider.qml
 msgid "BatteryWatch: Applying UPower device override for '%1': %2 -> %3"
 msgstr "BatteryWatch: применяется переопределение устройства UPower для «%1»: %2 -> %3"
+
+#. i18n: %1 is the charge percentage value; the trailing % is a literal percent sign.
+#: ../contents/ui/TrayDeviceItem.qml
+msgid "%1%"
+msgstr "%1%"
+
+#: ../contents/ui/UpdatePill.qml
+msgid "BatteryWatch v%1 is available — click to download"
+msgstr ""
+
+#: ../contents/ui/UpdatePill.qml
+msgid "Update v%1"
+msgstr ""
+
+#: ../contents/ui/UpdatePill.qml
+msgid "Dismiss"
+msgstr ""
+
+#: ../contents/ui/UpdatePill.qml
+msgid "Hide until the next update"
+msgstr ""
 
 #~ msgid "Steam Controller 2 Integration"
 #~ msgstr "Интеграция с Steam Controller 2"
