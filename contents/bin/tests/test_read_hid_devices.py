@@ -1115,6 +1115,15 @@ PULSAR_ONLINE_OFF = bytes.fromhex(
     "08 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 4a"
 )
 
+# Captured from issue #69; the XD7 report-9 frames are from its receiver.
+XD7_ONLINE = bytes.fromhex("09 03 00 00 00 01 01 00 00 00 00 00 00 00 00 00 47")
+XD7_UNLINKED = bytes.fromhex("09 03 00 00 00 01 00 00 00 00 00 00 00 00 00 00 48")
+XD7_BATTERY = bytes.fromhex("09 04 00 00 00 02 4b 00 00 00 00 00 00 00 00 00 fb")
+XD7E_ONLINE = bytes.fromhex("08 03 00 00 00 01 01 a7 38 7b 00 00 00 00 00 00 ee")
+XD7E_UNLINKED = bytes.fromhex("08 03 00 00 00 01 00 a7 38 7b 00 00 00 00 00 00 ef")
+XD7E_CHARGING = bytes.fromhex("08 04 00 00 00 02 64 01 10 66 00 00 00 00 00 00 6c")
+XD7E_DISCHARGING = bytes.fromhex("08 04 00 00 00 02 64 00 10 66 00 00 00 00 00 00 6d")
+
 def pulsar_reply(report_id, command, pct=None, charging=None, online=None,
                  status=0, busy=False):
     buf = bytearray(17)
@@ -1204,9 +1213,7 @@ def test_pulsar_discovery_uses_vendor_page_not_the_first_interface():
 def test_pulsar_wired_aria_discovers_and_reads_the_feature_node():
     install_pulsar_scenario(pid=0xFA7B)
     scenario["reply_queue"] = [
-        bytes.fromhex("09 03 00 00 00 01 01 00 00 00 00 00 00 00 00 00 47"),
-        bytes.fromhex("09 04 00 00 00 02 4b 00 00 00 00 00 00 00 00 00 fb"),
-        bytes.fromhex("09 03 00 00 00 01 01 00 00 00 00 00 00 00 00 00 47"),
+        XD7_ONLINE, XD7_BATTERY, XD7_ONLINE,
     ]
     devices = rhd.find_devices()
     assert len(devices) == 1
@@ -1255,6 +1262,51 @@ def test_pulsar_aria_e_uses_output_writes_on_the_selected_node():
     assert scenario["write_data"] == [
         PULSAR_ONLINE_ON, PULSAR_BATTERY, PULSAR_ONLINE_OFF
     ]
+
+def test_pulsar_captured_xd7e_charging_and_discharging():
+    for battery, charging in ((XD7E_CHARGING, True), (XD7E_DISCHARGING, False)):
+        install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
+                                nodes=("hidraw3", "hidraw4"), reply_report_id=8)
+        scenario["reply_queue"] = [XD7E_ONLINE, battery, XD7E_ONLINE]
+        assert rhd.read_status(rhd.find_devices()[0]) == {
+            "percentage": 100, "charging": charging
+        }
+
+def test_pulsar_captured_unlinked_replies_end_wait_and_still_send_offline():
+    captures = (
+        (0x25A7, 0xFA7C, "Fantech Aria XD7", 9, XD7_UNLINKED),
+        (0x3554, 0xF5D5, "Fantech Aria E XD7E", 8, XD7E_UNLINKED),
+    )
+    for vid, pid, name, report_id, unlinked in captures:
+        install_pulsar_scenario(vid=vid, pid=pid, name=name, reply_report_id=report_id)
+        scenario["reply_queue"] = [unlinked, unlinked]
+        dev = rhd.find_devices()[0]
+        writes = []
+        def feature_write(fd, request, timeout):
+            writes.append((fd, request, len(scenario["reads"])))
+        def output_write(fd, request):
+            writes.append((fd, bytes(request), len(scenario["reads"])))
+            return len(request)
+        with mock.patch.object(rhd, "_write_feature_report", feature_write), \
+             mock.patch.object(rhd.os, "write", output_write):
+            assert rhd._device_entry(dev) is None
+        assert writes == [(506, PULSAR_ONLINE_ON, 0), (506, PULSAR_ONLINE_OFF, 1)]
+        assert len(scenario["reads"]) == 2
+
+def test_pulsar_unrelated_packets_do_not_end_online_wait():
+    install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",
+                            nodes=("hidraw3", "hidraw4"), reply_report_id=8)
+    scenario["reply_queue"] = [
+        XD7E_UNLINKED[:10],
+        bytes([9]) + XD7E_UNLINKED[1:],
+        XD7E_UNLINKED[:1] + bytes([4]) + XD7E_UNLINKED[2:],
+        XD7E_UNLINKED[:2] + bytes([1]) + XD7E_UNLINKED[3:],
+        XD7E_ONLINE, XD7E_CHARGING, XD7E_ONLINE,
+    ]
+    assert rhd.read_status(rhd.find_devices()[0]) == {
+        "percentage": 100, "charging": True
+    }
+    assert len(scenario["reads"]) == 7
 
 def test_pulsar_online_busy_reply_is_resent():
     install_pulsar_scenario(vid=0x3554, pid=0xF5D5, name="Fantech Aria E XD7E",

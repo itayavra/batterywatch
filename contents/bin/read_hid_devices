@@ -113,6 +113,7 @@ class RequestTransaction(NamedTuple):
     required:       bool = True   # False = best effort; failure does not discard the reading
     retry_reply:    Callable[[bytes], bool] | None = None  # Reply means "busy; send again"
     max_attempts:   int = 1
+    failure_reply: Callable[[bytes], bool] | None = None  # Reply definitively fails this step
 
     def rejection_reason(self, buf) -> str | None:
         if not buf:
@@ -470,6 +471,13 @@ def _pulsar_busy(report_id):
                 and buf[2] == 0 and buf[10] == 1)
     return busy
 
+def _pulsar_not_linked(report_id):
+    def not_linked(buf):
+        return (len(buf) >= 11 and buf[0] == report_id
+                and buf[1] == PULSAR_ONLINE_COMMAND and buf[2] == 0
+                and buf[6] == 0 and buf[10] != 1)
+    return not_linked
+
 def _pulsar_transactions(report_id, write_mode):
     return (
         RequestTransaction(
@@ -480,6 +488,7 @@ def _pulsar_transactions(report_id, write_mode):
             write_mode=write_mode,
             retry_reply=_pulsar_busy(report_id),
             max_attempts=20,
+            failure_reply=_pulsar_not_linked(report_id),
         ),
         RequestTransaction(
             key="battery",
@@ -1189,6 +1198,9 @@ def _wait_transaction_reply(dev, poller, fd, transaction, timeout):
         if transaction.retry_reply is not None and transaction.retry_reply(buf):
             debug(f"{dev.desc.name}: {transaction.key} replied busy; retrying")
             return _TRANSACTION_RETRY
+        if transaction.failure_reply is not None and transaction.failure_reply(buf):
+            debug(f"{dev.desc.name}: {transaction.key} received a failure reply")
+            return None
         reason = transaction.rejection_reason(buf)
         if reason is not None:
             debug(f"{dev.desc.name}: ignored: {reason}")
