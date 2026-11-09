@@ -12,6 +12,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, 'GVariant.js'), 'utf8'), co
 const GVariant = { parseReply: context.parseReply };
 vm.runInContext(fs.readFileSync(path.join(__dirname, 'DeviceUtils.js'), 'utf8'), context);
 const DeviceUtils = {
+    ConnectionType: context.ConnectionType,
     canonicalSerial: context.canonicalSerial,
     deviceIdentity: context.deviceIdentity,
     getIconForType: context.getIconForType,

@@ -22,8 +22,7 @@ Item {
     // unsupported, and devices connected via this mean are handled by kernel/OS
     // https://github.com/openrazer/openrazer/issues?q=state%3Aopen%20label%3ABluetooth
 
-    // 0 = wired; 1 = wireless (dongle); 2 = bluetooth
-    readonly property int wirelessType: 1
+    readonly property int wirelessType: DeviceUtils.ConnectionType.Wireless
 
     // Data passed to the applet
     property var devices: []
