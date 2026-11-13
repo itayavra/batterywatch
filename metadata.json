@@ -13,10 +13,12 @@
             }
         ],
         "Category": "System Information",
+        "Category[fr]": "Informations système",
         "Category[hu]": "Rendszerinformáció",
         "Category[pl]": "Szczegóły Systemowe",
         "Category[he]": "מידע על המערכת",
         "Description": "Monitor battery levels of all connected devices",
+        "Description[fr]": "Surveille les niveaux de batterie de tous les appareils connectés",
         "Description[de]": "Überwacht die Akkustände aller verbundenen Geräte",
         "Description[hu]": "Csatlakoztatott eszközök akkumulátorszintjének megjelenítése",
         "Description[pl]": "Monitoruj poziom baterii wszystkich podłączonych urządzeń",
