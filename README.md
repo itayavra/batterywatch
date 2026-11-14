@@ -94,6 +94,7 @@ For instructions on how to contribute translations, add new languages, or test c
 | en     | English      | ✅ Source   |   100% |
 | cs     | Czech        | ✅ Complete |   100% |
 | de     | German       | ✅ Complete |   100% |
+| fr     | French       | ✅ Complete |   100% |
 | he     | Hebrew       | ✅ Complete |   100% |
 | hu     | Hungarian    | ✅ Complete |   100% |
 | nl     | Dutch        | ✅ Complete |   100% |
