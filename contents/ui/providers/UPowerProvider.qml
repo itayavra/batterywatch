@@ -23,6 +23,8 @@ Item {
         "logitech g903 wired/wireless gaming mouse": "mouse",
         // PowerPlay / Lightspeed: HID++ advertises G-keys as a keyboard collection
         "g502 lightspeed wireless gaming mouse": "mouse",
+        // Glorious: the battery's HID node also carries Consumer/System Control key inputs
+        "glorious model i 2 wireless": "mouse",
     })
     
     function refresh() {
