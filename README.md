@@ -92,6 +92,7 @@ For instructions on how to contribute translations, add new languages, or test c
 | Locale | Language | Status | % Done |
 |--------|----------|--------|--------|
 | en     | English      | ✅ Source   |   100% |
+| ar     | Arabic       | ✅ Complete |   100% |
 | cs     | Czech        | ✅ Complete |   100% |
 | de     | German       | ✅ Complete |   100% |
 | fr     | French       | ✅ Complete |   100% |
