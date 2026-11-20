@@ -191,8 +191,10 @@ for cat in $catalogs; do
 	if [ -z "$langName" ] || [ "$langName" = "LANGUAGE" ] || [ "$langName" = "$catLocale" ]; then
 		# Fallback to a few known ones or just use the locale capitalized
 		case "$catLocale" in
+			ar) langName="Arabic" ;;
 			cs) langName="Czech" ;;
 			de) langName="German" ;;
+			fr) langName="French" ;;
 			he) langName="Hebrew" ;;
 			hu) langName="Hungarian" ;;
 			nl) langName="Dutch" ;;
