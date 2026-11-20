@@ -11,9 +11,9 @@ Item {
     property bool upowerEnabled: Plasmoid.configuration.enableUPowerIntegration
     property var devices: []
     
-    readonly property int wiredType: 0
-    readonly property int wirelessType: 1
-    readonly property int bluetoothType: 2
+    readonly property int wiredType: DeviceUtils.ConnectionType.Wired
+    readonly property int wirelessType: DeviceUtils.ConnectionType.Wireless
+    readonly property int bluetoothType: DeviceUtils.ConnectionType.Bluetooth
     
     // UPower device type overrides for devices incorrectly reported by UPower
     readonly property var upowerDeviceTypeOverrides: ({

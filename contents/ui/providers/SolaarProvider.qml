@@ -22,8 +22,8 @@ Item {
     readonly property string helperPath: Qt.resolvedUrl("../../bin/read_solaar_devices").toString().slice(7)
 
     // Connection types (same identifiers as the other providers)
-    readonly property int wirelessType: 1
-    readonly property int bluetoothType: 2
+    readonly property int wirelessType: DeviceUtils.ConnectionType.Wireless
+    readonly property int bluetoothType: DeviceUtils.ConnectionType.Bluetooth
 
     // Data passed to the applet
     property var devices: []

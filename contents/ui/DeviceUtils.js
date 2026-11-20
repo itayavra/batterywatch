@@ -1,6 +1,12 @@
 
 // Shared device utilities
 
+var ConnectionType = Object.freeze({
+    Wired: 0,
+    Wireless: 1,
+    Bluetooth: 2
+})
+
 // Serials for one physical device arrive in different shapes: the HID++ unit
 // serial Solaar reports (F90D4F0C), the kernel's HID_UNIQ which UPower echoes
 // in the serial field for the same receiver unit (f9-0d-4f-0c), and a

@@ -67,7 +67,7 @@ Item {
                 percentage: d.charge,
                 type: d.type || "phone",
                 icon: DeviceUtils.getIconForType(d.type || "phone"),
-                connectionType: 1,
+                connectionType: DeviceUtils.ConnectionType.Wireless,
                 source: "kdeconnect",
                 batteries: emptyList,
                 charging: d.charging === true,
