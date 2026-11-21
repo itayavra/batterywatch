@@ -95,6 +95,7 @@ For instructions on how to contribute translations, add new languages, or test c
 | ar     | Arabic       | ✅ Complete |   100% |
 | cs     | Czech        | ✅ Complete |   100% |
 | de     | German       | ✅ Complete |   100% |
+| es     | Spanish      | ✅ Complete |   100% |
 | fr     | French       | ✅ Complete |   100% |
 | he     | Hebrew       | ✅ Complete |   100% |
 | hu     | Hungarian    | ✅ Complete |   100% |

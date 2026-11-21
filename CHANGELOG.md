@@ -4,6 +4,7 @@
 
 ### Added
 - **French translation** — complete `fr` catalog with the compiled `.mo` file and localized plasmoid name, category and description
+- **Spanish translation** — complete `es` catalog with the compiled `.mo` file and localized plasmoid name, category and description
 - **Arabic translation** — complete `ar` catalog with the compiled `.mo` file and localized plasmoid name, category and description
 
 ### Changed

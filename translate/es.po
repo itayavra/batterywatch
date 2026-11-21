@@ -1,0 +1,571 @@
+# Translation of batterywatch in Spanish
+# Copyright (C) 2026
+# This file is distributed under the same license as the batterywatch package.
+# Pedro Flores, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: batterywatch\n"
+"Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
+"POT-Creation-Date: 2026-11-07 19:53+0100\n"
+"PO-Revision-Date: 2026-11-19 12:00+0100\n"
+"Last-Translator: Pedro Flores\n"
+"Language-Team: \n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: ../metadata.desktop
+msgid "BatteryWatch"
+msgstr "BatteryWatch"
+
+#: ../contents/config/config.qml
+msgid "Appearance"
+msgstr "Aspecto"
+
+#: ../contents/config/config.qml
+msgid "Integrations"
+msgstr "Integraciones"
+
+#: ../contents/config/config.qml
+msgid "Notification"
+msgstr "Notificaciones"
+
+#: ../contents/config/config.qml
+msgid "Updates"
+msgstr "Actualizaciones"
+
+#: ../contents/config/config.qml
+msgid "Advanced settings"
+msgstr "Ajustes avanzados"
+
+#: ../contents/ui/config/AdvancedSettings.qml
+msgid "Toggle Debug mode"
+msgstr "Activar el modo de depuración"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "System Default (%1)"
+msgstr "Predeterminado del sistema (%1)"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Tray Settings"
+msgstr "Ajustes de la bandeja"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Font family:"
+msgstr "Tipo de letra:"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Change the font family used for system tray text."
+msgstr "Cambia el tipo de letra del texto de la bandeja del sistema."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Style"
+msgstr "Estilo"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Bold"
+msgstr "Negrita"
+
+#: ../contents/ui/config/Appearance.qml
+msgid ""
+"Make the tray text bold.\n"
+"Adjust weight between 100 and 1000."
+msgstr ""
+"Pone en negrita el texto de la bandeja.\n"
+"Ajusta el grosor entre 100 y 1000."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Italic"
+msgstr "Cursiva"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Make the tray text italic."
+msgstr "Pone en cursiva el texto de la bandeja."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Sizes"
+msgstr "Tamaños"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Font"
+msgstr "Letra"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Adjust the size of tray text (in pixels)."
+msgstr "Ajusta el tamaño del texto de la bandeja (en píxeles)."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Icon"
+msgstr "Icono"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Adjust the size of tray icons (in pixels)."
+msgstr "Ajusta el tamaño de los iconos de la bandeja (en píxeles)."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Spacing"
+msgstr "Espaciado"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Adjust the gap between tray icons (in pixels)."
+msgstr "Ajusta la separación entre los iconos de la bandeja (en píxeles)."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Charging indicator"
+msgstr "Indicador de carga"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Show charging indicator in tray"
+msgstr "Mostrar el indicador de carga en la bandeja"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Battery Colors"
+msgstr "Colores de la batería"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Default"
+msgstr "Predeterminado"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Use when no other color state applies. When disabled, system color is used instead."
+msgstr "Se usa cuando no se aplica ningún otro estado de color. Si se desactiva, se usa el color del sistema."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Charging"
+msgstr "Cargando"
+
+#: ../contents/ui/config/Appearance.qml
+msgid ""
+"Overrides all other colors when device is charging.\n"
+"Not all devices are currently supported!"
+msgstr ""
+"Sustituye a todos los demás colores mientras el dispositivo se está cargando.\n"
+"¡De momento no todos los dispositivos son compatibles!"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Zone 1"
+msgstr "Zona 1"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "≤"
+msgstr "≤"
+
+#: ../contents/ui/config/Appearance.qml ../contents/ui/config/Notifications.qml
+msgid "%"
+msgstr "%"
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Applied when battery falls below the set threshold."
+msgstr "Se aplica cuando la batería baja del umbral establecido."
+
+#: ../contents/ui/config/Appearance.qml
+msgid "Zone 2"
+msgstr "Zona 2"
+
+#: ../contents/ui/config/Modules.qml
+msgid "UPower Integration"
+msgstr "Integración con UPower"
+
+#: ../contents/ui/config/Modules.qml
+msgid "Enable"
+msgstr "Activar"
+
+#: ../contents/ui/config/Modules.qml
+msgid "OpenLinkHub Integration"
+msgstr "Integración con OpenLinkHub"
+
+#: ../contents/ui/config/Modules.qml
+msgid "Port: "
+msgstr "Puerto: "
+
+#: ../contents/ui/config/Modules.qml
+msgid "OpenRazer Integration"
+msgstr "Integración con OpenRazer"
+
+#: ../contents/ui/config/Modules.qml
+msgid "Polling interval"
+msgstr "Intervalo de sondeo"
+
+#: ../contents/ui/config/Modules.qml
+msgid "s"
+msgstr "s"
+
+#: ../contents/ui/config/Modules.qml
+msgid "Sets the interval for OpenRazer device state updates."
+msgstr "Establece el intervalo de actualización del estado de los dispositivos de OpenRazer."
+
+#: ../contents/ui/config/Modules.qml
+msgid "KDE Connect Integration"
+msgstr "Integración con KDE Connect"
+
+#: ../contents/ui/config/Modules.qml
+msgid "Sets the interval for KDE Connect device state updates."
+msgstr "Establece el intervalo de actualización del estado de los dispositivos de KDE Connect."
+
+#: ../contents/ui/config/Modules.qml
+msgid "BlueZ Integration"
+msgstr "Integración con BlueZ"
+
+#: ../contents/ui/config/Modules.qml
+msgid "Sets the interval for polling BlueZ for the battery updates of connected devices."
+msgstr "Establece el intervalo de sondeo de BlueZ para actualizar la batería de los dispositivos conectados."
+
+#: ../contents/ui/config/Modules.qml
+msgid "HID Devices Integration"
+msgstr "Integración con dispositivos HID"
+
+#: ../contents/ui/config/Modules.qml
+msgid ""
+"Sets the interval for re-checking HID devices when none are connected.\n"
+"When a device is active, it updates automatically."
+msgstr ""
+"Establece el intervalo para volver a buscar dispositivos HID cuando no hay ninguno conectado.\n"
+"Cuando hay un dispositivo activo, se actualiza automáticamente."
+
+#: ../contents/ui/config/Modules.qml
+msgid "Solaar Integration"
+msgstr "Integración con Solaar"
+
+#: ../contents/ui/config/Modules.qml
+msgid ""
+"Sets the interval for Solaar device state updates.\n"
+"Requires Solaar to be installed; Logitech devices only."
+msgstr ""
+"Establece el intervalo de actualización del estado de los dispositivos de Solaar.\n"
+"Necesita tener Solaar instalado; solo dispositivos Logitech."
+
+#: ../contents/ui/config/Modules.qml
+msgid "HeadsetControl Integration"
+msgstr "Integración con HeadsetControl"
+
+#: ../contents/ui/config/Modules.qml
+msgid "Sets the interval for HeadsetControl battery updates."
+msgstr "Establece el intervalo de actualización de la batería de HeadsetControl."
+
+#: ../contents/ui/config/Notifications.qml ../contents/ui/DeviceRow.qml
+msgid "Enable Notification"
+msgstr "Activar notificaciones"
+
+#: ../contents/ui/config/Notifications.qml
+msgid "Threshold"
+msgstr "Umbral"
+
+#: ../contents/ui/config/Notifications.qml
+msgid "Shows system notification when battery falls below the set threshold."
+msgstr "Muestra una notificación del sistema cuando la batería baja del umbral establecido."
+
+#: ../contents/ui/config/Updates.qml
+msgid "Update checks"
+msgstr "Búsqueda de actualizaciones"
+
+#: ../contents/ui/config/Updates.qml
+msgid "Check for updates"
+msgstr "Buscar actualizaciones"
+
+#: ../contents/ui/config/Updates.qml
+msgid "Periodically asks GitHub for the latest BatteryWatch release. No data is sent."
+msgstr "Consulta periódicamente en GitHub la última versión de BatteryWatch. No se envía ningún dato."
+
+#: ../contents/ui/config/Updates.qml
+msgid "How to notify"
+msgstr "Cómo avisar"
+
+#: ../contents/ui/config/Updates.qml
+msgid "Tooltip hint"
+msgstr "Aviso en la ayuda emergente"
+
+#: ../contents/ui/config/Updates.qml
+msgid "(Update available) appended when hovering the tray icon"
+msgstr "Se añade «(Actualización disponible)» al pasar el ratón sobre el icono de la bandeja"
+
+#: ../contents/ui/config/Updates.qml
+msgid "Header pill"
+msgstr "Aviso en la cabecera"
+
+#: ../contents/ui/config/Updates.qml
+msgid "Dismissible download chip in the popup header"
+msgstr "Aviso de descarga descartable en la cabecera de la ventana emergente"
+
+#: ../contents/ui/DeviceRow.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/HeadsetControlProvider.qml ../contents/ui/providers/HIDDevicesProvider.qml ../contents/ui/providers/OpenLinkHubProvider.qml ../contents/ui/providers/SolaarProvider.qml
+msgid "Unknown Device"
+msgstr "Dispositivo desconocido"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Permission needed - run the command in a terminal"
+msgstr "Se necesita permiso - ejecuta el comando en un terminal"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Battery"
+msgstr "Batería"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "%1: <span style=\"color:%4\">%2%</span>%3"
+msgstr "%1: <span style=\"color:%4\">%2%</span>%3"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Disconnect"
+msgstr "Desconectar"
+
+#: ../contents/ui/DeviceRow.qml ../contents/ui/providers/BluezProvider.qml ../contents/ui/providers/CompanionProvider.qml ../contents/ui/providers/SolaarProvider.qml ../contents/ui/providers/UPowerProvider.qml
+msgid "Disconnect device"
+msgstr "Desconectar el dispositivo"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Show"
+msgstr "Mostrar"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Hide"
+msgstr "Ocultar"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Show in tray"
+msgstr "Mostrar en la bandeja"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Hide from tray"
+msgstr "Ocultar de la bandeja"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Disable Notification"
+msgstr "Desactivar notificaciones"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Copied!"
+msgstr "¡Copiado!"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Copy command"
+msgstr "Copiar comando"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Copied to clipboard"
+msgstr "Copiado al portapapeles"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "Copy the command to run in a terminal"
+msgstr "Copia el comando para ejecutarlo en un terminal"
+
+#: ../contents/ui/DeviceRow.qml
+msgid "%1%%2"
+msgstr "%1%%2"
+
+#: ../contents/ui/main.qml
+msgid "Low battery"
+msgstr "Batería baja"
+
+#: ../contents/ui/main.qml
+msgid "Device"
+msgstr "Dispositivo"
+
+#: ../contents/ui/main.qml
+msgid "%1%2 has %3% battery remaining"
+msgstr "%1%2: queda un %3% de batería"
+
+#. i18n: %1 is the version number.
+#: ../contents/ui/main.qml
+msgid "BatteryWatch v%1 (Update available)"
+msgstr "BatteryWatch v%1 (Actualización disponible)"
+
+#. i18n: %1 is the version number.
+#: ../contents/ui/main.qml
+msgid "BatteryWatch v%1"
+msgstr "BatteryWatch v%1"
+
+#: ../contents/ui/main.qml
+msgid "No connected devices"
+msgstr "No hay dispositivos conectados"
+
+#: ../contents/ui/main.qml
+msgid "%1 - permission needed"
+msgstr "%1 - se necesita permiso"
+
+#. i18n: %1 can be the device name or, in the case of multiple batteries, the battery label,
+#. or simply the word, ‘Battery’. %2 is the charge percentage value.
+#: ../contents/ui/main.qml
+msgid "%1: %2%"
+msgstr "%1: %2%"
+
+#. i18n: The delimiter when listing multiple batteries in the same device.
+#: ../contents/ui/main.qml
+msgid ", "
+msgstr ", "
+
+#. i18n: Used when there are multiple batteries in a device.
+#. %1 is the device name.
+#. %2 is the delimited list of the device's batteries and their charge percentages.
+#: ../contents/ui/main.qml
+msgid "%1 - %2"
+msgstr "%1 - %2"
+
+#: ../contents/ui/main.qml
+msgid "All devices hidden"
+msgstr "Todos los dispositivos están ocultos"
+
+#: ../contents/ui/main.qml
+msgid "Device Battery Levels"
+msgstr "Nivel de batería de los dispositivos"
+
+#: ../contents/ui/main.qml
+msgid "Refresh"
+msgstr "Actualizar"
+
+#: ../contents/ui/main.qml
+msgid "Refresh devices"
+msgstr "Actualizar dispositivos"
+
+#: ../contents/ui/main.qml
+msgid "No connected devices with battery info found"
+msgstr "No se han encontrado dispositivos conectados con información de batería"
+
+#: ../contents/ui/providers/CompanionProvider.qml
+msgid "BatteryWatch: Companion service disconnected"
+msgstr "BatteryWatch: servicio Companion desconectado"
+
+#: ../contents/ui/providers/CompanionProvider.qml
+msgid "BatteryWatch: Companion service connected"
+msgstr "BatteryWatch: servicio Companion conectado"
+
+#: ../contents/ui/providers/CompanionProvider.qml
+msgid "BatteryWatch: Failed to parse companion data:"
+msgstr "BatteryWatch: no se han podido analizar los datos del servicio Companion:"
+
+#: ../contents/ui/providers/KDEConnectProvider.qml
+msgid "Unpair KDE Connect device"
+msgstr "Desvincular dispositivo de KDE Connect"
+
+#: ../contents/ui/providers/KDEConnectProvider.qml
+msgid "BatteryWatch: KDE Connect daemon unavailable"
+msgstr "BatteryWatch: el demonio de KDE Connect no está disponible"
+
+#: ../contents/ui/providers/KDEConnectProvider.qml
+msgid "BatteryWatch: unreadable KDE Connect reply (%1)"
+msgstr "BatteryWatch: respuesta ilegible de KDE Connect (%1)"
+
+#: ../contents/ui/providers/KDEConnectProvider.qml
+msgid "BatteryWatch: KDE Connect daemon connected"
+msgstr "BatteryWatch: demonio de KDE Connect conectado"
+
+#. i18n: %1 is the number of devices found.
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Devices found: %1"
+msgstr "Dispositivos encontrados: %1"
+
+#. i18n: %1 is the error.
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Server error: %1"
+msgstr "Error del servidor: %1"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Server responded without any battery data!"
+msgstr "¡El servidor ha respondido sin datos de batería!"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Failed to parse battery data:"
+msgstr "No se han podido analizar los datos de batería:"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Invalid battery data received:"
+msgstr "Se han recibido datos de batería no válidos:"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Invalid device data for serial:"
+msgstr "Datos de dispositivo no válidos para el número de serie:"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Error processing battery data:"
+msgstr "Error al procesar los datos de batería:"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Invalid battery device data, skipping"
+msgstr "Datos de batería del dispositivo no válidos; se omiten"
+
+#. i18n: %1 is the serial number of the device.
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Device '%1' is not connected, removing."
+msgstr "El dispositivo «%1» no está conectado; se elimina."
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Processed devices:"
+msgstr "Dispositivos procesados:"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Invalid device data received for device creation"
+msgstr "Se han recibido datos de dispositivo no válidos para crear el dispositivo"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Invalid battery device data for device creation"
+msgstr "Datos de batería no válidos para crear el dispositivo"
+
+#. i18n: %1 is the serial number of the device.
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Device '%1' is not connected, skipping."
+msgstr "El dispositivo «%1» no está conectado; se omite."
+
+#. i18n: %1 is the serial number of the device.
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Fetching device data for serial: %1"
+msgstr "Obteniendo los datos del dispositivo con número de serie: %1"
+
+#. i18n: %1 is the serial number of the device.
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Successfully fetched device data for serial: %1"
+msgstr "Datos obtenidos correctamente del dispositivo con número de serie: %1"
+
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Failed to parse device data:"
+msgstr "No se han podido analizar los datos del dispositivo:"
+
+#. i18n: %1 is the serial number of the device.
+#: ../contents/ui/providers/OpenLinkHubProvider.qml
+msgid "Server error fetching device '%1':"
+msgstr "Error del servidor al obtener el dispositivo «%1»:"
+
+#: ../contents/ui/providers/OpenRazerProvider.qml
+msgid "Unknown Razer Device"
+msgstr "Dispositivo Razer desconocido"
+
+#. i18n: %1 is the error message of the D-Bus call.
+#: ../contents/ui/providers/OpenRazerProvider.qml
+msgid "BatteryWatch: OpenRazer daemon unavailable (%1)"
+msgstr "BatteryWatch: el demonio de OpenRazer no está disponible (%1)"
+
+#: ../contents/ui/providers/OpenRazerProvider.qml
+msgid "BatteryWatch: unreadable OpenRazer reply (%1)"
+msgstr "BatteryWatch: respuesta ilegible de OpenRazer (%1)"
+
+#. i18n: %1 is the helper's hint why Solaar is unusable.
+#: ../contents/ui/providers/SolaarProvider.qml
+msgid "BatteryWatch: Solaar library unavailable (%1)"
+msgstr "BatteryWatch: la biblioteca de Solaar no está disponible (%1)"
+
+#. i18n: Used when a device is known by BatteryWatch to be misreported by UPower.
+#. %1 is the device's model name. %2 is the erroneously reported device type (e.g.: ‘mouse’).
+#. %3 is the correct device type.
+#: ../contents/ui/providers/UPowerProvider.qml
+msgid "BatteryWatch: Applying UPower device override for '%1': %2 -> %3"
+msgstr "BatteryWatch: aplicando la corrección del tipo de dispositivo de UPower para «%1»: %2 -> %3"
+
+#. i18n: %1 is the charge percentage value; the trailing % is a literal percent sign.
+#: ../contents/ui/TrayDeviceItem.qml
+msgid "%1%"
+msgstr "%1%"
+
+#: ../contents/ui/UpdatePill.qml
+msgid "BatteryWatch v%1 is available — click to download"
+msgstr "BatteryWatch v%1 está disponible — haz clic para descargarla"
+
+#: ../contents/ui/UpdatePill.qml
+msgid "Update v%1"
+msgstr "Actualización v%1"
+
+#: ../contents/ui/UpdatePill.qml
+msgid "Dismiss"
+msgstr "Descartar"
+
+#: ../contents/ui/UpdatePill.qml
+msgid "Hide until the next update"
+msgstr "Ocultar hasta la próxima actualización"
