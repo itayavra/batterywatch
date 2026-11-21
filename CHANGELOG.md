@@ -4,6 +4,7 @@
 
 ### Added
 - **French translation** — complete `fr` catalog with the compiled `.mo` file and localized plasmoid name, category and description
+- **Spanish translation** — complete `es` catalog with the compiled `.mo` file and localized plasmoid name, category and description
 
 ### Changed
 - **Translation catalogs synced for the new settings** — the notification, update-check and HeadsetControl strings are now in every catalog, and German is fully translated (contributed by @LookforFPS, PR #73)
