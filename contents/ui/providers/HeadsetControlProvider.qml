@@ -11,7 +11,7 @@ Item {
     property int pollingTime: Plasmoid.configuration.headsetControlPollingTime
 
     readonly property string command: "headsetcontrol -b -o json"
-    readonly property int wirelessType: 1
+    readonly property int wirelessType: DeviceUtils.ConnectionType.Wireless
 
     property var devices: []
 

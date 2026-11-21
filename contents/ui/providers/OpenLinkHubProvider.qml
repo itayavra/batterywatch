@@ -177,7 +177,7 @@ Item {
 			type: batteryDevice.type || "unknown",
 			icon: DeviceUtils.getIconForType(batteryDevice.type || "unknown"),
 			source: "openlinkhub",
-			connectionType: 2, // Always wireless if passed to the device list
+			connectionType: DeviceUtils.ConnectionType.Bluetooth,
 			model: null,
 			objectPath: null,
 			nativePath: null,

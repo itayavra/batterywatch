@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import org.kde.plasma.plasma5support 2.0 as P5Support
 import org.kde.plasma.plasmoid 2.0
+import "../DeviceUtils.js" as DeviceUtils
 
 // BlueZ device provider.
 //
@@ -17,8 +18,7 @@ Item {
 
     property var devices: []
 
-    // 0 = wired, 1 = wireless, 2 = bluetooth
-    readonly property int bluetoothType: 2
+    readonly property int bluetoothType: DeviceUtils.ConnectionType.Bluetooth
 
     property bool bluezEnabled: Plasmoid.configuration.enableBluezIntegration
 
