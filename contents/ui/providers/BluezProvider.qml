@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import org.kde.plasma.plasma5support 2.0 as P5Support
 import org.kde.plasma.plasmoid 2.0
+import "../DeviceUtils.js" as DeviceUtils
 
 // BlueZ device provider.
 //
@@ -71,12 +72,37 @@ Item {
         if (!connected || percentage < 0)
             return null
 
+        // Map BlueZ icon names to standardized device types, then normalize via getIconForType()
+        // BlueZ returns icon-spec names; we extract the device type to ensure consistent tray icons
+        var deviceType = ""
+        
+        // Map known BlueZ icon patterns to device types
+        if (bluezIcon.indexOf("gamepad") !== -1 || bluezIcon.indexOf("gaming") !== -1 || bluezIcon.indexOf("joystick") !== -1) {
+            deviceType = "gaming-input"
+        } else if (bluezIcon.indexOf("mouse") !== -1) {
+            deviceType = "mouse"
+        } else if (bluezIcon.indexOf("keyboard") !== -1) {
+            deviceType = "keyboard"
+        } else if (bluezIcon.indexOf("touchpad") !== -1) {
+            deviceType = "touchpad"
+        } else if (bluezIcon.indexOf("phone") !== -1 || bluezIcon.indexOf("smartphone") !== -1) {
+            deviceType = "smartphone"
+        } else if (bluezIcon.indexOf("tablet") !== -1) {
+            deviceType = "tablet"
+        } else if (bluezIcon.indexOf("headphones") !== -1) {
+            deviceType = "audio-headphones"
+        } else if (bluezIcon.indexOf("headset") !== -1) {
+            deviceType = "audio-headset"
+        }
+        
+        var icon = deviceType ? DeviceUtils.getIconForType(deviceType) : (bluezIcon || "battery-symbolic")
+
         return {
             name: name || address,
             // Bluetooth MAC address - used for dedup in main.qml's mergeDevices()
             serial: address,
-            // BlueZ icon names are icon-spec names already; pass them through
-            icon: bluezIcon || "battery-symbolic",
+            // Use standardized icon mapping for consistent tray appearance across providers
+            icon: icon,
             percentage: percentage,
             // The GATT Battery Service has no charging flag; null leaves it
             // unknown so mergeDevices() can fill it from another provider
