@@ -15,18 +15,6 @@ Item {
     readonly property int wirelessType: 1
     readonly property int bluetoothType: 2
     
-    // UPower device type overrides for devices incorrectly reported by UPower
-    readonly property var upowerDeviceTypeOverrides: ({
-        "logitech k400 plus": "keyboard",  // Keyboard with touchpad, reported as mouse
-        // Wireless mice, reported as keyboards when connected via USB cable
-        "pro x wireless": "mouse",
-        "logitech g903 wired/wireless gaming mouse": "mouse",
-        // PowerPlay / Lightspeed: HID++ advertises G-keys as a keyboard collection
-        "g502 lightspeed wireless gaming mouse": "mouse",
-        // Glorious: the battery's HID node also carries Consumer/System Control key inputs
-        "glorious model i 2 wireless": "mouse",
-    })
-    
     function refresh() {
         if (!root.upowerEnabled)
             return
@@ -154,20 +142,6 @@ Item {
 
         if (deviceType.length > 0) {
             device.type = deviceType
-        }
-
-        // Apply UPower-specific device type overrides for incorrectly reported devices
-        if (device.model) {
-            var modelLower = device.model.toLowerCase()
-            var overrideType = root.upowerDeviceTypeOverrides[modelLower]
-            if (overrideType) {
-				// i18n: Used when a device is known by BatteryWatch to be misreported by UPower. 
-				// %1 is the device's model name. %2 is the erroneously reported device type (e.g.: ‘mouse’). 
-				// %3 is the correct device type.
-                console.log(i18n("BatteryWatch: Applying UPower device override for '%1': %2 -> %3", 
-                    device.model, device.type, overrideType))
-                device.type = overrideType
-            }
         }
 
         if (device.type) {
