@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-11-07 19:53+0100\n"
+"POT-Creation-Date: 2026-11-23 01:51+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -416,14 +416,6 @@ msgid "No connected devices with battery info found"
 msgstr ""
 
 #: ../contents/ui/providers/CompanionProvider.qml
-msgid "BatteryWatch: Companion service disconnected"
-msgstr ""
-
-#: ../contents/ui/providers/CompanionProvider.qml
-msgid "BatteryWatch: Companion service connected"
-msgstr ""
-
-#: ../contents/ui/providers/CompanionProvider.qml
 msgid "BatteryWatch: Failed to parse companion data:"
 msgstr ""
 
@@ -432,15 +424,7 @@ msgid "Unpair KDE Connect device"
 msgstr ""
 
 #: ../contents/ui/providers/KDEConnectProvider.qml
-msgid "BatteryWatch: KDE Connect daemon unavailable"
-msgstr ""
-
-#: ../contents/ui/providers/KDEConnectProvider.qml
 msgid "BatteryWatch: unreadable KDE Connect reply (%1)"
-msgstr ""
-
-#: ../contents/ui/providers/KDEConnectProvider.qml
-msgid "BatteryWatch: KDE Connect daemon connected"
 msgstr ""
 
 #. i18n: %1 is the number of devices found.
@@ -448,65 +432,12 @@ msgstr ""
 msgid "Devices found: %1"
 msgstr ""
 
-#. i18n: %1 is the error.
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Server error: %1"
-msgstr ""
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Server responded without any battery data!"
-msgstr ""
-
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Failed to parse battery data:"
 msgstr ""
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Invalid battery data received:"
-msgstr ""
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Invalid device data for serial:"
-msgstr ""
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Error processing battery data:"
-msgstr ""
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Invalid battery device data, skipping"
-msgstr ""
-
-#. i18n: %1 is the serial number of the device.
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Device '%1' is not connected, removing."
-msgstr ""
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Processed devices:"
-msgstr ""
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Invalid device data received for device creation"
-msgstr ""
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Invalid battery device data for device creation"
-msgstr ""
-
-#. i18n: %1 is the serial number of the device.
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Device '%1' is not connected, skipping."
-msgstr ""
-
-#. i18n: %1 is the serial number of the device.
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Fetching device data for serial: %1"
-msgstr ""
-
-#. i18n: %1 is the serial number of the device.
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Successfully fetched device data for serial: %1"
 msgstr ""
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
@@ -522,25 +453,8 @@ msgstr ""
 msgid "Unknown Razer Device"
 msgstr ""
 
-#. i18n: %1 is the error message of the D-Bus call.
-#: ../contents/ui/providers/OpenRazerProvider.qml
-msgid "BatteryWatch: OpenRazer daemon unavailable (%1)"
-msgstr ""
-
 #: ../contents/ui/providers/OpenRazerProvider.qml
 msgid "BatteryWatch: unreadable OpenRazer reply (%1)"
-msgstr ""
-
-#. i18n: %1 is the helper's hint why Solaar is unusable.
-#: ../contents/ui/providers/SolaarProvider.qml
-msgid "BatteryWatch: Solaar library unavailable (%1)"
-msgstr ""
-
-#. i18n: Used when a device is known by BatteryWatch to be misreported by UPower.
-#. %1 is the device's model name. %2 is the erroneously reported device type (e.g.: ‘mouse’).
-#. %3 is the correct device type.
-#: ../contents/ui/providers/UPowerProvider.qml
-msgid "BatteryWatch: Applying UPower device override for '%1': %2 -> %3"
 msgstr ""
 
 #. i18n: %1 is the charge percentage value; the trailing % is a literal percent sign.

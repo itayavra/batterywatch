@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-11-07 19:53+0100\n"
+"POT-Creation-Date: 2026-11-23 01:51+0200\n"
 "PO-Revision-Date: 2026-11-19 12:00+0100\n"
 "Last-Translator: Pedro Flores\n"
 "Language-Team: \n"
@@ -422,14 +422,6 @@ msgid "No connected devices with battery info found"
 msgstr "No se han encontrado dispositivos conectados con información de batería"
 
 #: ../contents/ui/providers/CompanionProvider.qml
-msgid "BatteryWatch: Companion service disconnected"
-msgstr "BatteryWatch: servicio Companion desconectado"
-
-#: ../contents/ui/providers/CompanionProvider.qml
-msgid "BatteryWatch: Companion service connected"
-msgstr "BatteryWatch: servicio Companion conectado"
-
-#: ../contents/ui/providers/CompanionProvider.qml
 msgid "BatteryWatch: Failed to parse companion data:"
 msgstr "BatteryWatch: no se han podido analizar los datos del servicio Companion:"
 
@@ -438,82 +430,21 @@ msgid "Unpair KDE Connect device"
 msgstr "Desvincular dispositivo de KDE Connect"
 
 #: ../contents/ui/providers/KDEConnectProvider.qml
-msgid "BatteryWatch: KDE Connect daemon unavailable"
-msgstr "BatteryWatch: el demonio de KDE Connect no está disponible"
-
-#: ../contents/ui/providers/KDEConnectProvider.qml
 msgid "BatteryWatch: unreadable KDE Connect reply (%1)"
 msgstr "BatteryWatch: respuesta ilegible de KDE Connect (%1)"
-
-#: ../contents/ui/providers/KDEConnectProvider.qml
-msgid "BatteryWatch: KDE Connect daemon connected"
-msgstr "BatteryWatch: demonio de KDE Connect conectado"
 
 #. i18n: %1 is the number of devices found.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Devices found: %1"
 msgstr "Dispositivos encontrados: %1"
 
-#. i18n: %1 is the error.
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Server error: %1"
-msgstr "Error del servidor: %1"
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Server responded without any battery data!"
-msgstr "¡El servidor ha respondido sin datos de batería!"
-
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Failed to parse battery data:"
 msgstr "No se han podido analizar los datos de batería:"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Invalid battery data received:"
-msgstr "Se han recibido datos de batería no válidos:"
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Invalid device data for serial:"
-msgstr "Datos de dispositivo no válidos para el número de serie:"
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Error processing battery data:"
 msgstr "Error al procesar los datos de batería:"
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Invalid battery device data, skipping"
-msgstr "Datos de batería del dispositivo no válidos; se omiten"
-
-#. i18n: %1 is the serial number of the device.
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Device '%1' is not connected, removing."
-msgstr "El dispositivo «%1» no está conectado; se elimina."
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Processed devices:"
-msgstr "Dispositivos procesados:"
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Invalid device data received for device creation"
-msgstr "Se han recibido datos de dispositivo no válidos para crear el dispositivo"
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Invalid battery device data for device creation"
-msgstr "Datos de batería no válidos para crear el dispositivo"
-
-#. i18n: %1 is the serial number of the device.
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Device '%1' is not connected, skipping."
-msgstr "El dispositivo «%1» no está conectado; se omite."
-
-#. i18n: %1 is the serial number of the device.
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Fetching device data for serial: %1"
-msgstr "Obteniendo los datos del dispositivo con número de serie: %1"
-
-#. i18n: %1 is the serial number of the device.
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Successfully fetched device data for serial: %1"
-msgstr "Datos obtenidos correctamente del dispositivo con número de serie: %1"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Failed to parse device data:"
@@ -528,26 +459,9 @@ msgstr "Error del servidor al obtener el dispositivo «%1»:"
 msgid "Unknown Razer Device"
 msgstr "Dispositivo Razer desconocido"
 
-#. i18n: %1 is the error message of the D-Bus call.
-#: ../contents/ui/providers/OpenRazerProvider.qml
-msgid "BatteryWatch: OpenRazer daemon unavailable (%1)"
-msgstr "BatteryWatch: el demonio de OpenRazer no está disponible (%1)"
-
 #: ../contents/ui/providers/OpenRazerProvider.qml
 msgid "BatteryWatch: unreadable OpenRazer reply (%1)"
 msgstr "BatteryWatch: respuesta ilegible de OpenRazer (%1)"
-
-#. i18n: %1 is the helper's hint why Solaar is unusable.
-#: ../contents/ui/providers/SolaarProvider.qml
-msgid "BatteryWatch: Solaar library unavailable (%1)"
-msgstr "BatteryWatch: la biblioteca de Solaar no está disponible (%1)"
-
-#. i18n: Used when a device is known by BatteryWatch to be misreported by UPower.
-#. %1 is the device's model name. %2 is the erroneously reported device type (e.g.: ‘mouse’).
-#. %3 is the correct device type.
-#: ../contents/ui/providers/UPowerProvider.qml
-msgid "BatteryWatch: Applying UPower device override for '%1': %2 -> %3"
-msgstr "BatteryWatch: aplicando la corrección del tipo de dispositivo de UPower para «%1»: %2 -> %3"
 
 #. i18n: %1 is the charge percentage value; the trailing % is a literal percent sign.
 #: ../contents/ui/TrayDeviceItem.qml
