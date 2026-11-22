@@ -167,7 +167,7 @@ Item {
                 if (!root.daemonUnavailable) {
                     root.daemonUnavailable = true;
                     // i18n: %1 is the error message of the D-Bus call.
-                    console.log(i18n("BatteryWatch: OpenRazer daemon unavailable (%1)", (data.stderr || "").trim()));
+                    console.log("BatteryWatch: OpenRazer daemon unavailable (" + (data.stderr || "").trim() + ")");
                 }
                 return;
             }
