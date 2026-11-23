@@ -90,7 +90,7 @@ Item {
                 if (root.available) {
                     root.available = false
                     root.devices = []
-                    console.log(i18n("BatteryWatch: Companion service disconnected"))
+                    console.log("BatteryWatch: Companion service disconnected")
                 }
                 return
             }
@@ -109,7 +109,7 @@ Item {
                 
                 if (!root.available) {
                     root.available = true
-                    console.log(i18n("BatteryWatch: Companion service connected"))
+                    console.log("BatteryWatch: Companion service connected")
                 }
             } catch (e) {
                 console.warn(i18n("BatteryWatch: Failed to parse companion data:"), e)

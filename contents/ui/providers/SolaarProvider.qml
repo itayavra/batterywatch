@@ -169,7 +169,7 @@ Item {
                     if (!root.solaarUnavailable) {
                         root.solaarUnavailable = true
                         // i18n: %1 is the helper's hint why Solaar is unusable.
-                        console.log(i18n("BatteryWatch: Solaar library unavailable (%1)", parsed.hint || parsed.error))
+                        console.log("BatteryWatch: Solaar library unavailable (" + (parsed.hint || parsed.error) + ")")
                     }
                     root.failureBackoff = 6
                     root.devices = []

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: batterywatch\n"
 "Report-Msgid-Bugs-To: https://github.com/itayavra/batterywatch\n"
-"POT-Creation-Date: 2026-11-07 19:53+0100\n"
+"POT-Creation-Date: 2026-11-23 01:51+0200\n"
 "PO-Revision-Date: 2026-11-20 00:00+0000\n"
 "Last-Translator: Amr <akkk33@protonmail.com>\n"
 "Language-Team: Arabic\n"
@@ -73,7 +73,9 @@ msgstr "عريض"
 msgid ""
 "Make the tray text bold.\n"
 "Adjust weight between 100 and 1000."
-msgstr "اجعل نص صينية النظام عريضًا.\nاضبط ثقل الخط بين 100 و1000."
+msgstr ""
+"اجعل نص صينية النظام عريضًا.\n"
+"اضبط ثقل الخط بين 100 و1000."
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Italic"
@@ -139,7 +141,9 @@ msgstr "قيد الشحن"
 msgid ""
 "Overrides all other colors when device is charging.\n"
 "Not all devices are currently supported!"
-msgstr "يتجاوز الألوان الأخرى أثناء شحن الجهاز.\nليست كل الأجهزة مدعومة حاليًا!"
+msgstr ""
+"يتجاوز الألوان الأخرى أثناء شحن الجهاز.\n"
+"ليست كل الأجهزة مدعومة حاليًا!"
 
 #: ../contents/ui/config/Appearance.qml
 msgid "Zone 1"
@@ -217,7 +221,9 @@ msgstr "تكامل أجهزة HID"
 msgid ""
 "Sets the interval for re-checking HID devices when none are connected.\n"
 "When a device is active, it updates automatically."
-msgstr "يضبط فترة إعادة فحص أجهزة HID عند عدم اتصال أي منها.\nيتحدث الجهاز النشط تلقائيًا."
+msgstr ""
+"يضبط فترة إعادة فحص أجهزة HID عند عدم اتصال أي منها.\n"
+"يتحدث الجهاز النشط تلقائيًا."
 
 #: ../contents/ui/config/Modules.qml
 msgid "Solaar Integration"
@@ -227,7 +233,9 @@ msgstr "تكامل Solaar"
 msgid ""
 "Sets the interval for Solaar device state updates.\n"
 "Requires Solaar to be installed; Logitech devices only."
-msgstr "يضبط فترة تحديث حالة أجهزة Solaar.\nيتطلب تثبيت Solaar؛ لأجهزة Logitech فقط."
+msgstr ""
+"يضبط فترة تحديث حالة أجهزة Solaar.\n"
+"يتطلب تثبيت Solaar؛ لأجهزة Logitech فقط."
 
 #: ../contents/ui/config/Modules.qml
 msgid "HeadsetControl Integration"
@@ -414,14 +422,6 @@ msgid "No connected devices with battery info found"
 msgstr "لا توجد أجهزة متصلة بمعلومات بطارية"
 
 #: ../contents/ui/providers/CompanionProvider.qml
-msgid "BatteryWatch: Companion service disconnected"
-msgstr "BatteryWatch: خدمة Companion غير متصلة"
-
-#: ../contents/ui/providers/CompanionProvider.qml
-msgid "BatteryWatch: Companion service connected"
-msgstr "BatteryWatch: خدمة Companion متصلة"
-
-#: ../contents/ui/providers/CompanionProvider.qml
 msgid "BatteryWatch: Failed to parse companion data:"
 msgstr "BatteryWatch: تعذّر تحليل بيانات Companion:"
 
@@ -430,82 +430,21 @@ msgid "Unpair KDE Connect device"
 msgstr "إلغاء اقتران جهاز KDE Connect"
 
 #: ../contents/ui/providers/KDEConnectProvider.qml
-msgid "BatteryWatch: KDE Connect daemon unavailable"
-msgstr "BatteryWatch: برنامج KDE Connect الخفي غير متاح"
-
-#: ../contents/ui/providers/KDEConnectProvider.qml
 msgid "BatteryWatch: unreadable KDE Connect reply (%1)"
 msgstr "BatteryWatch: رد KDE Connect غير قابل للقراءة (%1)"
-
-#: ../contents/ui/providers/KDEConnectProvider.qml
-msgid "BatteryWatch: KDE Connect daemon connected"
-msgstr "BatteryWatch: برنامج KDE Connect الخفي متصل"
 
 #. i18n: %1 is the number of devices found.
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Devices found: %1"
 msgstr "الأجهزة المكتشفة: %1"
 
-#. i18n: %1 is the error.
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Server error: %1"
-msgstr "خطأ في الخادم: %1"
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Server responded without any battery data!"
-msgstr "لم يُرسل الخادم أي بيانات بطارية!"
-
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Failed to parse battery data:"
 msgstr "تعذّر تحليل بيانات البطارية:"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Invalid battery data received:"
-msgstr "بيانات بطارية غير صالحة:"
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Invalid device data for serial:"
-msgstr "بيانات جهاز غير صالحة للرقم التسلسلي:"
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Error processing battery data:"
 msgstr "خطأ في معالجة بيانات البطارية:"
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Invalid battery device data, skipping"
-msgstr "بيانات بطارية غير صالحة، يتم التخطي"
-
-#. i18n: %1 is the serial number of the device.
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Device '%1' is not connected, removing."
-msgstr "الجهاز '%1' غير متصل، تتم إزالته."
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Processed devices:"
-msgstr "الأجهزة المعالجة:"
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Invalid device data received for device creation"
-msgstr "بيانات جهاز غير صالحة لإنشاء الجهاز"
-
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Invalid battery device data for device creation"
-msgstr "بيانات بطارية غير صالحة لإنشاء الجهاز"
-
-#. i18n: %1 is the serial number of the device.
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Device '%1' is not connected, skipping."
-msgstr "الجهاز '%1' غير متصل، يتم التخطي."
-
-#. i18n: %1 is the serial number of the device.
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Fetching device data for serial: %1"
-msgstr "جلب بيانات الجهاز للرقم التسلسلي: %1"
-
-#. i18n: %1 is the serial number of the device.
-#: ../contents/ui/providers/OpenLinkHubProvider.qml
-msgid "Successfully fetched device data for serial: %1"
-msgstr "تم جلب بيانات الجهاز للرقم التسلسلي: %1"
 
 #: ../contents/ui/providers/OpenLinkHubProvider.qml
 msgid "Failed to parse device data:"
@@ -520,26 +459,9 @@ msgstr "خطأ في الخادم أثناء جلب الجهاز '%1':"
 msgid "Unknown Razer Device"
 msgstr "جهاز Razer غير معروف"
 
-#. i18n: %1 is the error message of the D-Bus call.
-#: ../contents/ui/providers/OpenRazerProvider.qml
-msgid "BatteryWatch: OpenRazer daemon unavailable (%1)"
-msgstr "BatteryWatch: برنامج OpenRazer الخفي غير متاح (%1)"
-
 #: ../contents/ui/providers/OpenRazerProvider.qml
 msgid "BatteryWatch: unreadable OpenRazer reply (%1)"
 msgstr "BatteryWatch: رد OpenRazer غير قابل للقراءة (%1)"
-
-#. i18n: %1 is the helper's hint why Solaar is unusable.
-#: ../contents/ui/providers/SolaarProvider.qml
-msgid "BatteryWatch: Solaar library unavailable (%1)"
-msgstr "BatteryWatch: مكتبة Solaar غير متاحة (%1)"
-
-#. i18n: Used when a device is known by BatteryWatch to be misreported by UPower.
-#. %1 is the device's model name. %2 is the erroneously reported device type (e.g.: ‘mouse’).
-#. %3 is the correct device type.
-#: ../contents/ui/providers/UPowerProvider.qml
-msgid "BatteryWatch: Applying UPower device override for '%1': %2 -> %3"
-msgstr "BatteryWatch: تطبيق تجاوز جهاز UPower لـ'%1': %2 -> %3"
 
 #. i18n: %1 is the charge percentage value; the trailing % is a literal percent sign.
 #: ../contents/ui/TrayDeviceItem.qml

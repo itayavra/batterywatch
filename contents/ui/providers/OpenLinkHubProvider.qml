@@ -51,7 +51,7 @@ Item {
 			if (req.status !== 200) {
 				available = false;
 				// i18n: %1 is the error.
-				if(debugMode) console.log(i18n("Server error: %1", req.status));
+				if(debugMode) console.log("Server error: " + req.status);
 				return;
 			}
 			
@@ -59,7 +59,7 @@ Item {
 				const response = JSON.parse(req.responseText); // Step 1.2: Parse the HTTP response
 				const batteryData = response.data;
 				if(!batteryData){
-					console.log(i18n("Server responded without any battery data!"));
+					console.log("Server responded without any battery data!");
 					available = false;
 					return;
 				}
@@ -80,7 +80,7 @@ Item {
 	function processBatteryData(data){
 		// Add null/undefined check for data
 		if (!data || typeof data !== 'object') {
-			if(debugMode) console.log(i18n("Invalid battery data received:"), data);
+			if(debugMode) console.log("Invalid battery data received:", data);
 			devices = []; // Clear devices if no valid data
 			return;
 		}
@@ -91,7 +91,7 @@ Item {
 				const device = data[serial];
 				// Check if device data is valid before processing
 				if (!device || typeof device !== 'object') {
-					if(debugMode) console.log(i18n("Invalid device data for serial:"), serial);
+					if(debugMode) console.log("Invalid device data for serial:", serial);
 					return; // Skip this device
 				}
 				  
@@ -114,7 +114,7 @@ Item {
 		batteryDevices.forEach((batteryDevice) => {
 			// Add safety check for batteryDevice
 			if (!batteryDevice || !batteryDevice.serial) {
-				if(debugMode) console.log(i18n("Invalid battery device data, skipping"));
+				if(debugMode) console.log("Invalid battery device data, skipping");
 				return;
 			}
 			
@@ -124,7 +124,7 @@ Item {
 				fetchDevice(batteryDevice.serial, batteryDevice, (deviceData) => {
 					if (deviceData && !isDeviceConnected(deviceData)) {
 						// i18n: %1 is the serial number of the device.
-						if (debugMode) console.log(i18n("Device '%1' is not connected, removing.", batteryDevice.serial));
+						if (debugMode) console.log("Device '" + batteryDevice.serial + "' is not connected, removing.");
 						devices = devices.filter(d => d && d.serial !== batteryDevice.serial);
 						return;						
 					}
@@ -150,24 +150,24 @@ Item {
 		// Remove devices that are no longer present, with null checks
 		devices = devices.filter(d => d && d.serial && (updatedSerials.includes(d.serial) || batteryDevices.some(bd => bd && bd.serial === d.serial)));
 
-		if(debugMode) console.log(i18n("Processed devices:"), JSON.stringify(devices, null, 2));
+		if(debugMode) console.log("Processed devices:", JSON.stringify(devices, null, 2));
 	}
 
 	function createDeviceObject(data, batteryDevice) {
 		// Add safety checks for null/undefined data
 		if (!data || typeof data !== 'object') {
-			if (debugMode) console.log(i18n("Invalid device data received for device creation"));
+			if (debugMode) console.log("Invalid device data received for device creation");
 			return null;
 		}
 		
 		if (!batteryDevice || !batteryDevice.serial) {
-			if (debugMode) console.log(i18n("Invalid battery device data for device creation"));
+			if (debugMode) console.log("Invalid battery device data for device creation");
 			return null;
 		}
 		
 		if (!data.Connected) {
 			// i18n: %1 is the serial number of the device.
-			if (debugMode) console.log(i18n("Device '%1' is not connected, skipping.", batteryDevice.serial));
+			if (debugMode) console.log("Device '" + batteryDevice.serial + "' is not connected, skipping.");
 			return null;
 		}
 		return {
@@ -188,7 +188,7 @@ Item {
 	
 	function fetchDevice(serial, batteryDevice, callback) {
 		// i18n: %1 is the serial number of the device.
-		if (debugMode) console.log(i18n("Fetching device data for serial: %1", serial));
+		if (debugMode) console.log("Fetching device data for serial: " + serial);
 		
 		let req = new XMLHttpRequest();
 		req.onreadystatechange = () => {
@@ -197,7 +197,7 @@ Item {
 					try {
 						let response = JSON.parse(req.responseText);
 						// i18n: %1 is the serial number of the device.
-						if (debugMode) console.log(i18n("Successfully fetched device data for serial: %1", serial));
+						if (debugMode) console.log("Successfully fetched device data for serial: " + serial);
 						callback(response.device || null);
 					} catch (e) {
 						console.error(i18n("Failed to parse device data:"), e);

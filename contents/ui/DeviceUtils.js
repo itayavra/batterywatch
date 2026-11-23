@@ -1,6 +1,19 @@
 
 // Shared device utilities
 
+// Known device type corrections: canonicalized name -> correct type
+// Applied across ALL providers, regardless of source
+const DEVICE_TYPE_OVERRIDES = {
+    "logitech k400 plus": "keyboard",  // Keyboard with touchpad, reported as mouse
+    // Wireless mice, reported as keyboards when connected via USB cable
+    "pro x wireless": "mouse",
+    "logitech g903 wired/wireless gaming mouse": "mouse",
+    // PowerPlay / Lightspeed: HID++ advertises G-keys as a keyboard collection
+    "g502 lightspeed wireless gaming mouse": "mouse",
+    // Glorious: the battery's HID node also carries Consumer/System Control key inputs
+    "glorious model i 2 wireless": "mouse",
+}
+
 // Serials for one physical device arrive in different shapes: the HID++ unit
 // serial Solaar reports (F90D4F0C), the kernel's HID_UNIQ which UPower echoes
 // in the serial field for the same receiver unit (f9-0d-4f-0c), and a
@@ -65,6 +78,26 @@ function getIconForType(deviceType) {
     }
 }
 
+// Apply centralized device type corrections based on model name
+// Used by all providers to ensure consistent type reporting across UPower, BlueZ, Solaar, HID, etc.
+function applyDeviceTypeOverride(device) {
+    if (!device || !device.name || typeof device.name !== "string")
+        return device
+    
+    const nameLower = device.name.toLowerCase()
+    const overrideType = DEVICE_TYPE_OVERRIDES[nameLower]
+    
+    if (overrideType && device.type !== overrideType) {
+        const corrected = Object.assign({}, device, { type: overrideType })
+        corrected.icon = getIconForType(overrideType)
+        console.log("BatteryWatch: Applying device type override for '" + device.name + "': " + 
+                   device.type + " -> " + overrideType)
+        return corrected
+    }
+    
+    return device
+}
+
 // One entry per device reported by two providers: the earlier entry stays,
 // the later one replaces a blocked placeholder or fills missing fields.
 function mergeDuplicate(winner, later) {
@@ -100,6 +133,8 @@ function mergeDevices(deviceProviders) {
 
         for (var i = 0; i < devices.length; i++) {
             var device = devices[i];
+            // Apply centralized device type overrides across all providers
+            device = applyDeviceTypeOverride(device)
             var id = deviceIdentity(device);
             if (!id)
                 continue;

@@ -114,7 +114,7 @@ Item {
                     root.devices = []
                     root.deviceData = {}
                     root.knownDevices = {}
-                    console.log(i18n("BatteryWatch: KDE Connect daemon unavailable"))
+                    console.log("BatteryWatch: KDE Connect daemon unavailable")
                 }
                 return
             }
@@ -148,7 +148,7 @@ Item {
             root.knownDevices = current
 
             if (wasEmpty && ids.length > 0)
-                console.log(i18n("BatteryWatch: KDE Connect daemon connected"))
+                console.log("BatteryWatch: KDE Connect daemon connected")
 
             Qt.callLater(root.updateDevices)
         }
