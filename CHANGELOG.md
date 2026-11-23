@@ -3,15 +3,22 @@
 ## [Unreleased]
 
 ### Added
-- **French translation** — complete `fr` catalog with the compiled `.mo` file and localized plasmoid name, category and description
-- **Spanish translation** — complete `es` catalog with the compiled `.mo` file and localized plasmoid name, category and description
-- **Arabic translation** — complete `ar` catalog with the compiled `.mo` file and localized plasmoid name, category and description
+- **French translation** — complete `fr` catalog with the compiled `.mo` file and localized plasmoid name, category and description (contributed by @ElessHorus, PR #74)
+- **Spanish translation** — complete `es` catalog with the compiled `.mo` file and localized plasmoid name, category and description (contributed by @PedroFlores199, PR #76)
+- **Arabic translation** — complete `ar` catalog with the compiled `.mo` file and localized plasmoid name, category and description (contributed by @amr3k, PR #77)
 
 ### Changed
 - **Translation catalogs synced for the new settings** — the notification, update-check and HeadsetControl strings are now in every catalog, and German is fully translated (contributed by @LookforFPS, PR #73)
+- **Device type overrides moved to shared utilities** — the UPower device type override logic (for misreported devices) is now centralized in `DeviceUtils`, so all providers automatically apply the same corrections
+- **Console logs no longer translated** — debug and informational logging strings are now kept in English instead of being translated; translation files have been cleaned up to remove these untranslated entries
+- **BlueZ device icons normalized** — Xbox controller and other BlueZ-reported device icons are now mapped to standardized icon names for consistent display across all providers
 
 ### Contributors
 - @LookforFPS — translation catalog refresh and German translations (PR #73)
+- @ElessHorus — French translation (PR #74)
+- @PedroFlores199 — Spanish translation (PR #76)
+- @amr3k — Arabic translation (PR #77)
+- @kaffeewolf — Glorious I2 wireless mouse device-type fix (PR #75)
 
 ## [0.3.3] - 2026-11-07
 
